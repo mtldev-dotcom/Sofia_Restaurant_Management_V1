@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import ThemeToggle from "@/components/ThemeToggle";
+import NavigationSidebar from "@/components/NavigationSidebar";
 import { Save, Upload, Layout, Trash2, AlertCircle, Loader2, FilePlus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -188,6 +189,7 @@ const Header = ({ onSave, onLoad, onDelete, onNew }: HeaderProps) => {
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center">
+            <NavigationSidebar />
             <div className="text-primary w-8 h-8 mr-3 flex items-center justify-center">
               <Layout className="w-6 h-6" />
             </div>
