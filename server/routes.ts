@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth } from "./auth";
 import { 
   insertFloorPlanSchema, 
   updateFloorPlanSchema,
@@ -8,12 +9,17 @@ import {
   updateRestaurantSchema,
   insertSeatingAreaSchema,
   updateSeatingAreaSchema,
+  insertUserSchema,
+  loginUserSchema,
   FloorPlanLayout
 } from "@shared/schema";
 import { z } from "zod";
 import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication
+  setupAuth(app);
+  
   // Middleware to handle common errors
   const handleErrors = (fn: (req: Request, res: Response) => Promise<any>) => {
     return async (req: Request, res: Response) => {
@@ -80,6 +86,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     res.status(204).end();
+  }));
+
+  // User routes - auth routes are handled by setupAuth
+  app.get('/api/user/:id', handleErrors(async (req, res) => {
+    const id = req.params.id;
+    const user = await storage.getUserById(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Remove password from the response
+    const { password, ...userWithoutPassword } = user;
+    
+    res.json(userWithoutPassword);
   }));
 
   // Restaurant Users routes

@@ -11,6 +11,9 @@ import {
   type SeatingArea,
   type InsertSeatingArea,
   type UpdateSeatingArea,
+  type InsertUser,
+  type UpdateUser,
+  type LoginUser,
   layoutSchema,
   users,
   restaurants,
@@ -20,8 +23,11 @@ import {
 } from "@shared/schema";
 import { db, pool } from './db';
 import { eq, and, desc } from 'drizzle-orm';
+import session from 'express-session';
+import connectPg from 'connect-pg-simple';
 
 // Storage interface
+
 export interface IStorage {
   // Restaurant methods
   getRestaurant(id: string): Promise<Restaurant | null>;
@@ -51,10 +57,32 @@ export interface IStorage {
   
   // Current user methods
   getCurrentUserRestaurants(userId: string): Promise<{ restaurant: Restaurant, role: string }[]>;
+  
+  // User authentication methods
+  getUserById(id: string): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: UpdateUser): Promise<User | null>;
+  deleteUser(id: string): Promise<boolean>;
+  validateUserCredentials(username: string, password: string): Promise<User | null>;
+  
+  // Session store
+  sessionStore: session.Store;
 }
 
 // Drizzle storage implementation
 export class DatabaseStorage implements IStorage {
+  readonly sessionStore: session.Store;
+  
+  constructor() {
+    const PostgresSessionStore = connectPg(session);
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      tableName: 'sessions',
+      createTableIfMissing: true
+    });
+  }
   // Restaurant methods
   async getRestaurant(id: string): Promise<Restaurant | null> {
     try {
@@ -553,6 +581,195 @@ export class DatabaseStorage implements IStorage {
       console.error('Error fetching user restaurants:', error);
       return [];
     }
+  }
+
+  // User authentication methods
+  async getUserById(id: string): Promise<User | null> {
+    try {
+      const results = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('Error fetching user by ID:', error);
+      return null;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<User | null> {
+    try {
+      const results = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('Error fetching user by username:', error);
+      return null;
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const results = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('Error fetching user by email:', error);
+      return null;
+    }
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    try {
+      // Check if username already exists
+      const existingUsername = await this.getUserByUsername(user.username);
+      if (existingUsername) {
+        throw new Error('Username already exists');
+      }
+      
+      // Check if email already exists
+      const existingEmail = await this.getUserByEmail(user.email);
+      if (existingEmail) {
+        throw new Error('Email already exists');
+      }
+      
+      // Hash password before storing
+      // In a real app, you would hash the password with bcrypt or similar
+      // For this example, we'll implement a simple hash function
+      const hashedPassword = await this.hashPassword(user.password);
+      
+      // Create user
+      const results = await db
+        .insert(users)
+        .values({
+          username: user.username,
+          password: hashedPassword,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role
+        })
+        .returning();
+      
+      if (results.length === 0) {
+        throw new Error('Failed to create user');
+      }
+      
+      return results[0];
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw new Error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async updateUser(id: string, user: UpdateUser): Promise<User | null> {
+    try {
+      // Check if user exists
+      const existingUser = await this.getUserById(id);
+      if (!existingUser) {
+        return null;
+      }
+      
+      // If username is changed, check if new username already exists
+      if (user.username && user.username !== existingUser.username) {
+        const existingUsername = await this.getUserByUsername(user.username);
+        if (existingUsername) {
+          throw new Error('Username already exists');
+        }
+      }
+      
+      // If email is changed, check if new email already exists
+      if (user.email && user.email !== existingUser.email) {
+        const existingEmail = await this.getUserByEmail(user.email);
+        if (existingEmail) {
+          throw new Error('Email already exists');
+        }
+      }
+      
+      // Update values
+      const updateValues: any = {
+        updatedAt: new Date()
+      };
+      
+      if (user.username) updateValues.username = user.username;
+      if (user.firstName) updateValues.firstName = user.firstName;
+      if (user.lastName) updateValues.lastName = user.lastName;
+      if (user.email) updateValues.email = user.email;
+      if (user.phoneNumber !== undefined) updateValues.phoneNumber = user.phoneNumber;
+      if (user.role) updateValues.role = user.role;
+      
+      // If password is provided, hash it before storing
+      if (user.password) {
+        updateValues.password = await this.hashPassword(user.password);
+      }
+      
+      const results = await db
+        .update(users)
+        .set(updateValues)
+        .where(eq(users.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return null;
+    }
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      const results = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning();
+      
+      return results.length > 0;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
+  async validateUserCredentials(username: string, password: string): Promise<User | null> {
+    try {
+      const user = await this.getUserByUsername(username);
+      if (!user) {
+        return null;
+      }
+      
+      // Verify password
+      const isPasswordValid = await this.verifyPassword(password, user.password);
+      if (!isPasswordValid) {
+        return null;
+      }
+      
+      return user;
+    } catch (error) {
+      console.error('Error validating user credentials:', error);
+      return null;
+    }
+  }
+  
+  // Helper methods for password hashing (would use bcrypt in a real app)
+  private async hashPassword(password: string): Promise<string> {
+    // In a real app, use a proper hashing library like bcrypt
+    // This is a placeholder implementation - do not use in production
+    const hashedPassword = password + '_hashed';
+    return hashedPassword;
+  }
+  
+  private async verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+    // In a real app, use a proper hashing library like bcrypt
+    // This is a placeholder implementation - do not use in production
+    return hashedPassword === plainPassword + '_hashed';
   }
 }
 

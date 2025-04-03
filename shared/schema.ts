@@ -38,10 +38,13 @@ export const layoutSchema = z.object({
 // User table schema
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   phoneNumber: text("phone_number"),
+  role: text("role").default("user").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -203,6 +206,26 @@ export const insertRestaurantSchema = z.object({
 // Schema for updating restaurants
 export const updateRestaurantSchema = insertRestaurantSchema.partial();
 
+// Schema for user registration
+export const insertUserSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phoneNumber: z.string().optional(),
+  role: z.enum(["admin", "user"]).default("user"),
+});
+
+// Schema for user login
+export const loginUserSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+// Schema for updating users
+export const updateUserSchema = insertUserSchema.partial();
+
 // Type definitions
 export type InsertFloorPlan = z.infer<typeof insertFloorPlanSchema>;
 export type UpdateFloorPlan = z.infer<typeof updateFloorPlanSchema>;
@@ -211,6 +234,10 @@ export type FloorPlan = typeof floorPlans.$inferSelect;
 export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
 export type UpdateRestaurant = z.infer<typeof updateRestaurantSchema>;
 export type Restaurant = typeof restaurants.$inferSelect;
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type LoginUser = z.infer<typeof loginUserSchema>;
 
 export type User = typeof users.$inferSelect;
 export type RestaurantUser = typeof restaurantUsers.$inferSelect;
