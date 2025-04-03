@@ -1,0 +1,106 @@
+
+> rest-express@1.0.0 dev
+> tsx server/index.ts
+
+11:40:46 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Auth cookies: [Object: null prototype] {}
+[auth] No token found in request
+11:40:51 PM [express] GET /api/auth/user 401 in 4ms :: {"error":"Not authenticated"}
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZjZhYTI2My0yYzgxLTQ3MTQtOTRjMS1kZThkZGE1NTgxNmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI2Mzk4LCJpYXQiOjE3NDM3MjI3OTgsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkJydW5vIiwidXNlcm5hbWUiOiJtdGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyMjc5OH1dLCJzZXNzaW9uX2lkIjoiN2VhZGI2NDMtNTdjNi00YjVkLWJmY2EtZTcxMGIzYWZmNTg2IiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.B2h6K9CskIPRHQ3Ndsy9aVPQPfUwOvpZ0yIjdh_iNkU'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase getUser error: AuthApiError: User from sub claim in JWT does not exist
+    at handleError (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async _handleRequest (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1195:16)
+    at async SupabaseAuthClient.getUser (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1180:14)
+    at async <anonymous> (/home/runner/workspace/server/auth.ts:722:31) {
+  __isAuthError: true,
+  status: 403,
+  code: 'user_not_found'
+}
+11:40:53 PM [express] GET /api/auth/user 401 in 328ms :: {"error":"Invalid or expired token"}
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZjZhYTI2My0yYzgxLTQ3MTQtOTRjMS1kZThkZGE1NTgxNmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI2Mzk4LCJpYXQiOjE3NDM3MjI3OTgsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkJydW5vIiwidXNlcm5hbWUiOiJtdGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyMjc5OH1dLCJzZXNzaW9uX2lkIjoiN2VhZGI2NDMtNTdjNi00YjVkLWJmY2EtZTcxMGIzYWZmNTg2IiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.B2h6K9CskIPRHQ3Ndsy9aVPQPfUwOvpZ0yIjdh_iNkU'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase getUser error: AuthApiError: User from sub claim in JWT does not exist
+    at handleError (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:102:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async _handleRequest (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:195:5)
+    at async _request (/home/runner/workspace/node_modules/@supabase/auth-js/src/lib/fetch.ts:157:16)
+    at async SupabaseAuthClient._getUser (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1195:16)
+    at async SupabaseAuthClient.getUser (/home/runner/workspace/node_modules/@supabase/auth-js/src/GoTrueClient.ts:1180:14)
+    at async <anonymous> (/home/runner/workspace/server/auth.ts:722:31) {
+  __isAuthError: true,
+  status: 403,
+  code: 'user_not_found'
+}
+11:40:53 PM [express] GET /api/auth/user 401 in 302ms :: {"error":"Invalid or expired token"}
+Restaurant options: {
+  restaurantOption: 'create',
+  restaurantName: 'My Restaurant',
+  restaurantAddress: ''
+}
+Creating restaurant "My Restaurant" for user f9657c03-2626-44ba-a914-1a85ad7eaa9e
+Restaurant created with ID: 53af9d12-3a71-4522-9dbb-997d198bd079
+[storage] Starting linkUserToRestaurant: user=f9657c03-2626-44ba-a914-1a85ad7eaa9e, restaurant=53af9d12-3a71-4522-9dbb-997d198bd079, role=owner
+[storage] Creating new association for user=f9657c03-2626-44ba-a914-1a85ad7eaa9e, restaurant=53af9d12-3a71-4522-9dbb-997d198bd079, role=owner
+[storage] Successfully created association with ID=0720c1c1-86be-48bd-925c-fa36072bc373
+User f9657c03-2626-44ba-a914-1a85ad7eaa9e linked to restaurant 53af9d12-3a71-4522-9dbb-997d198bd079 as owner
+11:41:45 PM [express] POST /api/auth/register 201 in 962ms :: {"id":"f9657c03-2626-44ba-a914-1a85ad7e…
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIzYzA5NjcyNC00OWMzLTRlMDYtYmRiOC01OTFlNDVjODZhNzYiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI3MzA1LCJpYXQiOjE3NDM3MjM3MDUsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkIiLCJ1c2VybmFtZSI6Im10bGRldiJ9LCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImFhbCI6ImFhbDEiLCJhbXIiOlt7Im1ldGhvZCI6InBhc3N3b3JkIiwidGltZXN0YW1wIjoxNzQzNzIzNzA1fV0sInNlc3Npb25faWQiOiJhNDY3NGRjYy02ZjVkLTQ4ZDktODc0OC1lNTM3NjljYmM1MWQiLCJpc19hbm9ueW1vdXMiOmZhbHNlfQ.WPKMbZcoihDaY20NlNlSPkHLYYtiVPDaLEUCeXb-gxs'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 3c096724-49c3-4e06-bdb8-591e45c86a76
+[auth] User not found by ID, trying email lookup: me@nickybruno.com
+[auth] User found by email, need to update ID
+[auth] Found 1 restaurant associations to update
+[auth] User with matching email found - direct ID update
+[auth] Using direct SQL to update user ID
+[auth] Error updating restaurant associations: error: insert or update on table "restaurant_users" violates foreign key constraint "restaurant_users_user_id_users_id_fk"
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/auth.ts:770:40) {
+  length: 335,
+  severity: 'ERROR',
+  code: '23503',
+  detail: 'Key (user_id)=(3c096724-49c3-4e06-bdb8-591e45c86a76) is not present in table "users".',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'restaurant_users',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'restaurant_users_user_id_users_id_fk',
+  file: 'ri_triggers.c',
+  line: '2608',
+  routine: 'ri_ReportViolation'
+}
+[auth] Creating new user record with Supabase ID
+Error creating user: Error: Username already exists
+    at DatabaseStorage.createUser (/home/runner/workspace/server/storage.ts:718:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/auth.ts:784:21)
+[auth] Direct SQL update failed: Error: Failed to create user: Username already exists
+    at DatabaseStorage.createUser (/home/runner/workspace/server/storage.ts:753:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async <anonymous> (/home/runner/workspace/server/auth.ts:784:21)
+[auth] Continuing with existing user record
+[auth] User found in database, returning user data
+11:41:47 PM [express] GET /api/auth/user 200 in 314ms :: {"id":"f9657c03-2626-44ba-a914-1a85ad7eaa9e"…
+11:41:47 PM [express] GET /api/restaurants/caf5abc2-4eb0-4641-a212-6f967b99db87 404 in 55ms :: {"erro…
+11:41:47 PM [express] GET /api/restaurants/caf5abc2-4eb0-4641-a212-6f967b99db87/floorplans 200 in 59m…

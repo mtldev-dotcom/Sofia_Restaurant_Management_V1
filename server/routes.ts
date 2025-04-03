@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { supabase } from "./supabase";
 import { 
   insertFloorPlanSchema, 
   updateFloorPlanSchema,
@@ -89,6 +90,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
 
   // User routes - auth routes are handled by setupAuth
+  // Current authenticated user's restaurants (no ID needed, uses auth token)
+  app.get('/api/user/restaurants', handleErrors(async (req, res) => {
+    // Get the user from the request (set by Supabase auth middleware)
+    const token = req.headers.authorization?.split(' ')[1] || 
+                req.cookies?.supabase_auth_token;
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    
+    // Get the user from Supabase
+    const { data: supabaseData } = await supabase.auth.getUser(token);
+    
+    if (!supabaseData?.user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+    
+    const userId = supabaseData.user.id;
+    
+    // Get the restaurants for this user
+    const restaurants = await storage.getCurrentUserRestaurants(userId);
+    res.json(restaurants);
+  }));
+
+  // Restaurant Users routes
+  app.get('/api/restaurants/:restaurantId/users', handleErrors(async (req, res) => {
+    const restaurantId = req.params.restaurantId;
+    const users = await storage.getRestaurantUsers(restaurantId);
+    res.json(users);
+  }));
+
+  // Get user by ID
   app.get('/api/user/:id', handleErrors(async (req, res) => {
     const id = req.params.id;
     const user = await storage.getUserById(id);
@@ -101,13 +134,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { password, ...userWithoutPassword } = user;
     
     res.json(userWithoutPassword);
-  }));
-
-  // Restaurant Users routes
-  app.get('/api/restaurants/:restaurantId/users', handleErrors(async (req, res) => {
-    const restaurantId = req.params.restaurantId;
-    const users = await storage.getRestaurantUsers(restaurantId);
-    res.json(users);
   }));
 
   // Current User Restaurants route
