@@ -145,13 +145,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/floorplans/:id', handleErrors(async (req, res) => {
     const id = req.params.id;
-    const success = await storage.deleteFloorPlan(id);
     
-    if (!success) {
-      return res.status(404).json({ error: 'Floor plan not found' });
+    try {
+      console.log(`Request to delete floor plan with ID: ${id}`);
+      const success = await storage.deleteFloorPlan(id);
+      
+      if (!success) {
+        console.log(`Floor plan with ID ${id} not found for deletion`);
+        return res.status(404).json({ error: 'Floor plan not found' });
+      }
+      
+      console.log(`Floor plan with ID ${id} successfully deleted`);
+      res.status(204).end();
+    } catch (error) {
+      console.error(`Error in delete floor plan route: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error; // This will be caught by the handleErrors wrapper
     }
-    
-    res.status(204).end();
   }));
 
   // Seating Areas routes

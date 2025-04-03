@@ -314,6 +314,15 @@ export class DatabaseStorage implements IStorage {
   
   async deleteFloorPlan(id: string): Promise<boolean> {
     try {
+      console.log(`Deleting floor plan with ID: ${id}`);
+      
+      // First delete associated seating areas
+      console.log(`Deleting associated seating areas for floor plan: ${id}`);
+      const deleteAreasQuery = `DELETE FROM seating_areas WHERE id_floor_plan = $1`;
+      await pool.query(deleteAreasQuery, [id]);
+      
+      // Then delete the floor plan
+      console.log(`Now deleting the floor plan itself: ${id}`);
       const results = await db
         .delete(floorPlans)
         .where(eq(floorPlans.id, id))
@@ -322,7 +331,7 @@ export class DatabaseStorage implements IStorage {
       return results.length > 0;
     } catch (error) {
       console.error('Error deleting floor plan:', error);
-      return false;
+      throw new Error(`Failed to delete floor plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   
