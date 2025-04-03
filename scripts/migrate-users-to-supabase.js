@@ -1,9 +1,8 @@
-require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-const { db } = require('../server/db');
-const { schema } = require('../shared/schema');
-const { users } = schema;
-const { eq } = require('drizzle-orm');
+import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
+import { db } from '../server/db.js';
+import { users } from '../shared/schema.js';
+import { eq } from 'drizzle-orm';
 
 // Initialize Supabase client with service role key for admin operations
 const supabase = createClient(
