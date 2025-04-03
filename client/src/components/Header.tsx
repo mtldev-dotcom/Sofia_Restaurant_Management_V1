@@ -1,18 +1,133 @@
 import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Save, Upload, Layout } from "lucide-react";
+import { Save, Upload, Layout, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface HeaderProps {
   onSave: () => void;
   onLoad: () => void;
+  onDelete?: () => void;
 }
 
-const Header = ({ onSave, onLoad }: HeaderProps) => {
+const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
   const floorPlanName = useFloorPlanStore((state) => state.name);
+  const floorPlanId = useFloorPlanStore((state) => state.id);
+  const isDefault = useFloorPlanStore((state) => state.isDefault);
+  const resetFloorPlan = useFloorPlanStore((state) => state.resetFloorPlan);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
+  
+  // Handle initiating floor plan deletion
+  const handleDeleteClick = () => {
+    if (!floorPlanId) {
+      toast({
+        title: "Nothing to delete",
+        description: "No floor plan is currently loaded",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (isDefault) {
+      toast({
+        title: "Cannot Delete",
+        description: "Default floor plans cannot be deleted",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setDeleteDialogOpen(true);
+  };
+  
+  // Handle confirming floor plan deletion
+  const confirmDelete = async () => {
+    if (!floorPlanId) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/floorplans/${floorPlanId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete floor plan');
+      }
+      
+      toast({
+        title: "Success",
+        description: `Deleted floor plan: ${floorPlanName}`,
+      });
+      
+      // Reset the floor plan in the store
+      resetFloorPlan();
+      
+      // Call the optional onDelete callback
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (error) {
+      console.error("Error deleting floor plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete floor plan",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
   
   return (
     <header className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
+      {/* Confirmation Dialog for Floor Plan Deletion */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center text-destructive">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Delete Floor Plan
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{floorPlanName}</strong>?
+              This action cannot be undone and all associated seating areas will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center">
@@ -45,6 +160,17 @@ const Header = ({ onSave, onLoad }: HeaderProps) => {
             >
               <Upload className="mr-1.5 h-4 w-4" />
               Load
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleDeleteClick} 
+              className={`inline-flex items-center ${!floorPlanId || isDefault ? 'opacity-50 cursor-not-allowed' : ''}`}
+              size="sm"
+              disabled={!floorPlanId || isDefault}
+              title={!floorPlanId ? "No floor plan loaded" : isDefault ? "Cannot delete default floor plan" : "Delete this floor plan"}
+            >
+              <Trash2 className="mr-1.5 h-4 w-4 text-destructive" />
+              Delete
             </Button>
             <div className="ml-2">
               <ThemeToggle />

@@ -10,20 +10,34 @@ import {
   CircleIcon, SquareIcon, RectangleHorizontalIcon, ArmchairIcon, 
   CircleDotIcon, BedDoubleIcon, PanelTopIcon, PanelTopCloseIcon, 
   GithubIcon, Flower2Icon, LayoutGrid, Calendar, Home, RefreshCw,
-  Loader2
+  Loader2, Trash2, AlertCircle
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { FloorPlan } from "@shared/schema";
 import BackgroundSettings from "@/components/BackgroundSettings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const Sidebar = () => {
   const startDrag = useFloorPlanStore((state) => state.startDrag);
   const { loadFloorPlan } = useFloorPlanStore();
   const restaurantId = useFloorPlanStore((state) => state.restaurantId);
   const [selectedTab, setSelectedTab] = useState("elements");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [floorPlanToDelete, setFloorPlanToDelete] = useState<FloorPlan | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Furniture element categories with modernized visualization
   const tables = [
@@ -103,6 +117,61 @@ const Sidebar = () => {
       });
     }
   };
+  
+  // Handle initiating floor plan deletion
+  const handleDeleteClick = (e: React.MouseEvent, floorPlan: FloorPlan) => {
+    e.stopPropagation(); // Prevent loading the floor plan
+    
+    if (floorPlan.isDefault) {
+      toast({
+        title: "Cannot Delete",
+        description: "Default floor plans cannot be deleted",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setFloorPlanToDelete(floorPlan);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Handle confirming floor plan deletion
+  const confirmDelete = async () => {
+    if (!floorPlanToDelete || !restaurantId) return;
+    
+    setIsDeleting(true);
+    
+    try {
+      const response = await fetch(`/api/floorplans/${floorPlanToDelete.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete floor plan');
+      }
+      
+      // Invalidate the floor plans query to refresh the list
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/restaurants', restaurantId, 'floorplans'] 
+      });
+      
+      toast({
+        title: "Success",
+        description: `Deleted floor plan: ${floorPlanToDelete.name}`,
+      });
+    } catch (error) {
+      console.error("Error deleting floor plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete floor plan",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setFloorPlanToDelete(null);
+    }
+  };
 
   const handleDragStart = (
     e: React.MouseEvent, 
@@ -139,6 +208,39 @@ const Sidebar = () => {
 
   return (
     <div className="w-72 border-r border-border bg-card h-full">
+      {/* Confirmation Dialog for Floor Plan Deletion */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center text-destructive">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Delete Floor Plan
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{floorPlanToDelete?.name}</strong>?
+              This action cannot be undone and all associated seating areas will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <Tabs 
         value={selectedTab} 
         onValueChange={setSelectedTab}
@@ -231,7 +333,7 @@ const Sidebar = () => {
                 {floorPlans.map((floorPlan) => (
                   <div
                     key={floorPlan.id}
-                    className="p-3 border border-border rounded-md hover:bg-accent/5 cursor-pointer transition-colors"
+                    className="relative p-3 border border-border rounded-md hover:bg-accent/5 cursor-pointer transition-colors group"
                     onClick={() => handleLoadFloorPlan(floorPlan)}
                   >
                     <div className="font-medium text-foreground flex items-center justify-between">
@@ -239,12 +341,24 @@ const Sidebar = () => {
                         <LayoutGrid className="h-4 w-4 mr-2 text-primary" />
                         {floorPlan.name}
                       </span>
-                      {floorPlan.isDefault && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary flex items-center">
-                          <Home className="h-3 w-3 mr-1" />
-                          Default
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {floorPlan.isDefault && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary flex items-center">
+                            <Home className="h-3 w-3 mr-1" />
+                            Default
+                          </span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-6 w-6 p-1 opacity-0 group-hover:opacity-100 transition-opacity ${floorPlan.isDefault ? 'text-muted cursor-not-allowed' : 'text-destructive'}`}
+                          onClick={(e) => handleDeleteClick(e, floorPlan)}
+                          disabled={floorPlan.isDefault}
+                          title={floorPlan.isDefault ? "Cannot delete default floor plan" : "Delete floor plan"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 flex items-center">
                       <span className="flex items-center">

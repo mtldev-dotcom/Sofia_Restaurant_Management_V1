@@ -7,6 +7,7 @@ import SaveLayoutModal from "@/components/SaveLayoutModal";
 import LoadLayoutModal from "@/components/LoadLayoutModal";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 
 const Home = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -44,6 +45,11 @@ const Home = () => {
       <Header 
         onSave={() => setIsSaveModalOpen(true)}
         onLoad={() => setIsLoadModalOpen(true)}
+        onDelete={() => {
+          // Refresh the floor plans list in the load modal
+          const queryKey = ['/api/restaurants', DEMO_RESTAURANT_ID, 'floorplans'];
+          queryClient.invalidateQueries({ queryKey });
+        }}
       />
       
       <div className="flex flex-1 overflow-hidden">
