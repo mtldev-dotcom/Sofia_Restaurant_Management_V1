@@ -729,18 +729,27 @@ export class DatabaseStorage implements IStorage {
       // For this example, we'll implement a simple hash function
       const hashedPassword = await this.hashPassword(user.password);
       
+      // Create user values with proper ID mapping
+      const userValues: any = {
+        username: user.username,
+        password: hashedPassword,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role
+      };
+      
+      // If custom ID is provided (e.g., from Supabase), use it
+      if (user.id) {
+        userValues.id = user.id;
+        console.log(`[storage] Creating user with explicit ID: ${user.id}`);
+      }
+      
       // Create user
       const results = await db
         .insert(users)
-        .values({
-          username: user.username,
-          password: hashedPassword,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          role: user.role
-        })
+        .values(userValues)
         .returning();
       
       if (results.length === 0) {
