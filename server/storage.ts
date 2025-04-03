@@ -8,11 +8,14 @@ import {
   type UpdateRestaurant,
   type RestaurantUser,
   type FloorPlanLayout,
-  type FloorPlanElement,
-  layoutSchema
+  layoutSchema,
+  users,
+  restaurants,
+  restaurantUsers,
+  floorPlans
 } from "@shared/schema";
-import { supabase } from './supabase';
-import { PostgrestError } from '@supabase/supabase-js';
+import { db } from './db';
+import { eq, and, desc } from 'drizzle-orm';
 
 // Storage interface
 export interface IStorage {
@@ -39,161 +42,156 @@ export interface IStorage {
   getCurrentUserRestaurants(userId: string): Promise<{ restaurant: Restaurant, role: string }[]>;
 }
 
-// Supabase storage implementation
-export class SupabaseStorage implements IStorage {
+// Drizzle storage implementation
+export class DatabaseStorage implements IStorage {
   // Restaurant methods
   async getRestaurant(id: string): Promise<Restaurant | null> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
+    try {
+      const results = await db.select().from(restaurants).where(eq(restaurants.id, id));
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
       console.error('Error fetching restaurant:', error);
       return null;
     }
-    
-    return data as Restaurant;
   }
   
   async getAllRestaurants(): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .order('name');
-    
-    if (error) {
+    try {
+      return await db.select().from(restaurants).orderBy(restaurants.name);
+    } catch (error) {
       console.error('Error fetching restaurants:', error);
       return [];
     }
-    
-    return data as Restaurant[];
   }
   
   async getRestaurantsByOwner(ownerId: string): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('owner_id', ownerId)
-      .order('name');
-    
-    if (error) {
+    try {
+      return await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.ownerId, ownerId))
+        .orderBy(restaurants.name);
+    } catch (error) {
       console.error('Error fetching owner restaurants:', error);
       return [];
     }
-    
-    return data as Restaurant[];
   }
   
   async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .insert(restaurant)
-      .select()
-      .single();
-    
-    if (error) {
+    try {
+      const results = await db
+        .insert(restaurants)
+        .values({
+          ownerId: restaurant.ownerId,
+          name: restaurant.name,
+          address: restaurant.address,
+          phone: restaurant.phone,
+          email: restaurant.email
+        })
+        .returning();
+      
+      if (results.length === 0) {
+        throw new Error('Failed to create restaurant');
+      }
+      
+      return results[0];
+    } catch (error) {
       console.error('Error creating restaurant:', error);
-      throw new Error(`Failed to create restaurant: ${error.message}`);
+      throw new Error(`Failed to create restaurant: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    return data as Restaurant;
   }
   
   async updateRestaurant(id: string, restaurant: UpdateRestaurant): Promise<Restaurant | null> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .update(restaurant)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
+    try {
+      const results = await db
+        .update(restaurants)
+        .set({
+          ownerId: restaurant.ownerId,
+          name: restaurant.name,
+          address: restaurant.address,
+          phone: restaurant.phone,
+          email: restaurant.email,
+          updatedAt: new Date()
+        })
+        .where(eq(restaurants.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
       console.error('Error updating restaurant:', error);
       return null;
     }
-    
-    return data as Restaurant;
   }
   
   async deleteRestaurant(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('restaurants')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
+    try {
+      const results = await db
+        .delete(restaurants)
+        .where(eq(restaurants.id, id))
+        .returning();
+      
+      return results.length > 0;
+    } catch (error) {
       console.error('Error deleting restaurant:', error);
       return false;
     }
-    
-    return true;
   }
 
   // Floor plan methods
   async getAllFloorPlans(restaurantId: string): Promise<FloorPlan[]> {
-    const { data, error } = await supabase
-      .from('floor_plans')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('name');
-    
-    if (error) {
+    try {
+      return await db
+        .select()
+        .from(floorPlans)
+        .where(eq(floorPlans.restaurantId, restaurantId))
+        .orderBy(floorPlans.name);
+    } catch (error) {
       console.error('Error fetching floor plans:', error);
       return [];
     }
-    
-    return data as FloorPlan[];
   }
   
   async getFloorPlan(id: string): Promise<FloorPlan | null> {
-    const { data, error } = await supabase
-      .from('floor_plans')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) {
+    try {
+      const results = await db
+        .select()
+        .from(floorPlans)
+        .where(eq(floorPlans.id, id));
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
       console.error('Error fetching floor plan:', error);
       return null;
     }
-    
-    return data as FloorPlan;
   }
   
   async getDefaultFloorPlan(restaurantId: string): Promise<FloorPlan | null> {
-    const { data, error } = await supabase
-      .from('floor_plans')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .eq('is_default', true)
-      .single();
-    
-    if (error) {
-      // If no default floor plan exists, this will error with a 'No rows matched' error
-      if (error.code === 'PGRST116') {
-        // No default floor plan, let's try to get any floor plan
-        const { data: anyFloorPlan, error: anyError } = await supabase
-          .from('floor_plans')
-          .select('*')
-          .eq('restaurant_id', restaurantId)
-          .limit(1)
-          .single();
-        
-        if (anyError) {
-          console.error('Error fetching any floor plan:', anyError);
-          return null;
-        }
-        
-        return anyFloorPlan as FloorPlan;
+    try {
+      // Try to find the default floor plan
+      const defaultResults = await db
+        .select()
+        .from(floorPlans)
+        .where(and(
+          eq(floorPlans.restaurantId, restaurantId),
+          eq(floorPlans.isDefault, true)
+        ));
+      
+      if (defaultResults.length > 0) {
+        return defaultResults[0];
       }
       
+      // If no default found, return any floor plan
+      const anyResults = await db
+        .select()
+        .from(floorPlans)
+        .where(eq(floorPlans.restaurantId, restaurantId))
+        .limit(1);
+      
+      return anyResults.length > 0 ? anyResults[0] : null;
+    } catch (error) {
       console.error('Error fetching default floor plan:', error);
       return null;
     }
-    
-    return data as FloorPlan;
   }
   
   async createFloorPlan(floorPlan: InsertFloorPlan): Promise<FloorPlan> {
@@ -201,37 +199,49 @@ export class SupabaseStorage implements IStorage {
     try {
       layoutSchema.parse(floorPlan.layout);
     } catch (e) {
-      console.error('Invalid floor plan layout:', e);
+      console.error('Error validating floor plan layout:', e);
       throw new Error('Invalid floor plan layout structure');
     }
     
-    // If this is set as default, unset any existing default
-    if (floorPlan.isDefault) {
-      await supabase
-        .from('floor_plans')
-        .update({ is_default: false })
-        .eq('restaurant_id', floorPlan.restaurantId)
-        .eq('is_default', true);
-    }
-    
-    const { data, error } = await supabase
-      .from('floor_plans')
-      .insert({
-        restaurant_id: floorPlan.restaurantId,
-        name: floorPlan.name,
-        layout: floorPlan.layout,
-        is_default: floorPlan.isDefault,
-        created_by: floorPlan.createdBy
-      })
-      .select()
-      .single();
-    
-    if (error) {
+    try {
+      // Check if restaurant exists
+      const restaurantCheck = await this.getRestaurant(floorPlan.restaurantId);
+      if (!restaurantCheck) {
+        throw new Error(`Restaurant with ID ${floorPlan.restaurantId} does not exist`);
+      }
+      
+      // If this is set as default, unset any existing default
+      if (floorPlan.isDefault) {
+        await db
+          .update(floorPlans)
+          .set({ isDefault: false })
+          .where(and(
+            eq(floorPlans.restaurantId, floorPlan.restaurantId),
+            eq(floorPlans.isDefault, true)
+          ));
+      }
+      
+      // Create the new floor plan
+      const results = await db
+        .insert(floorPlans)
+        .values({
+          restaurantId: floorPlan.restaurantId,
+          name: floorPlan.name,
+          layout: floorPlan.layout,
+          isDefault: floorPlan.isDefault,
+          createdBy: floorPlan.createdBy
+        })
+        .returning();
+      
+      if (results.length === 0) {
+        throw new Error('Failed to create floor plan');
+      }
+      
+      return results[0];
+    } catch (error) {
       console.error('Error creating floor plan:', error);
-      throw new Error(`Failed to create floor plan: ${error.message}`);
+      throw new Error(`Failed to create floor plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    return data as FloorPlan;
   }
   
   async updateFloorPlan(id: string, floorPlan: UpdateFloorPlan): Promise<FloorPlan | null> {
@@ -245,87 +255,110 @@ export class SupabaseStorage implements IStorage {
       }
     }
     
-    // If this is set as default, unset any existing default
-    if (floorPlan.isDefault && floorPlan.restaurantId) {
-      await supabase
-        .from('floor_plans')
-        .update({ is_default: false })
-        .eq('restaurant_id', floorPlan.restaurantId)
-        .eq('is_default', true)
-        .neq('id', id);
-    }
-    
-    // Transform fields to match database column names
-    const updateData: any = {};
-    if (floorPlan.restaurantId) updateData.restaurant_id = floorPlan.restaurantId;
-    if (floorPlan.name) updateData.name = floorPlan.name;
-    if (floorPlan.layout) updateData.layout = floorPlan.layout;
-    if (floorPlan.isDefault !== undefined) updateData.is_default = floorPlan.isDefault;
-    
-    const { data, error } = await supabase
-      .from('floor_plans')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
+    try {
+      // If this is set as default, unset any existing default
+      if (floorPlan.isDefault && floorPlan.restaurantId) {
+        await db
+          .update(floorPlans)
+          .set({ isDefault: false })
+          .where(and(
+            eq(floorPlans.restaurantId, floorPlan.restaurantId),
+            eq(floorPlans.isDefault, true),
+            eq(floorPlans.id, id).not()
+          ));
+      }
+      
+      // Update values
+      const updateValues: any = {
+        updatedAt: new Date()
+      };
+      
+      if (floorPlan.restaurantId) updateValues.restaurantId = floorPlan.restaurantId;
+      if (floorPlan.name) updateValues.name = floorPlan.name;
+      if (floorPlan.layout) updateValues.layout = floorPlan.layout;
+      if (floorPlan.isDefault !== undefined) updateValues.isDefault = floorPlan.isDefault;
+      
+      const results = await db
+        .update(floorPlans)
+        .set(updateValues)
+        .where(eq(floorPlans.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
       console.error('Error updating floor plan:', error);
       return null;
     }
-    
-    return data as FloorPlan;
   }
   
   async deleteFloorPlan(id: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('floor_plans')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
+    try {
+      const results = await db
+        .delete(floorPlans)
+        .where(eq(floorPlans.id, id))
+        .returning();
+      
+      return results.length > 0;
+    } catch (error) {
       console.error('Error deleting floor plan:', error);
       return false;
     }
-    
-    return true;
   }
   
   // Restaurant Users methods
   async getRestaurantUsers(restaurantId: string): Promise<RestaurantUser[]> {
-    const { data, error } = await supabase
-      .from('restaurant_users')
-      .select('*')
-      .eq('restaurant_id', restaurantId);
-    
-    if (error) {
+    try {
+      return await db
+        .select()
+        .from(restaurantUsers)
+        .where(eq(restaurantUsers.restaurantId, restaurantId));
+    } catch (error) {
       console.error('Error fetching restaurant users:', error);
       return [];
     }
-    
-    return data as RestaurantUser[];
   }
   
   // Current user methods
   async getCurrentUserRestaurants(userId: string): Promise<{ restaurant: Restaurant, role: string }[]> {
-    const { data, error } = await supabase
-      .from('restaurant_users')
-      .select(`
-        role,
-        restaurants:restaurant_id (*)
-      `)
-      .eq('user_id', userId);
-    
-    if (error) {
+    try {
+      // First, get the restaurant users for this user
+      const userRestaurants = await db
+        .select()
+        .from(restaurantUsers)
+        .where(eq(restaurantUsers.userId, userId));
+      
+      // If no restaurants found, return empty array
+      if (userRestaurants.length === 0) {
+        return [];
+      }
+      
+      // Get all restaurant IDs
+      const restaurantIds = userRestaurants.map(ur => ur.restaurantId);
+      
+      // Fetch all restaurants in one query
+      const restaurantList = await db
+        .select()
+        .from(restaurants)
+        .where(eq(restaurants.id, restaurantIds[0])); // We can't use an "in" clause easily here, so we'll filter afterwards
+      
+      // Create a map for easier lookup
+      const restaurantMap = new Map<string, Restaurant>();
+      for (const restaurant of restaurantList) {
+        restaurantMap.set(restaurant.id, restaurant);
+      }
+      
+      // Combine the data
+      return userRestaurants
+        .filter(ur => restaurantMap.has(ur.restaurantId))
+        .map(ur => ({
+          restaurant: restaurantMap.get(ur.restaurantId)!,
+          role: ur.role
+        }));
+    } catch (error) {
       console.error('Error fetching user restaurants:', error);
       return [];
     }
-    
-    return data.map((item: any) => ({
-      restaurant: item.restaurants as Restaurant,
-      role: item.role as string
-    }));
   }
 }
 
-export const storage = new SupabaseStorage();
+export const storage = new DatabaseStorage();
