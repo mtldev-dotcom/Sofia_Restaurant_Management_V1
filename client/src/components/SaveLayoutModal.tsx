@@ -161,22 +161,24 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
       
       // Process each table element
       for (const tableElement of tableElements) {
-        // Determine capacity based on table type/size
-        let capacity = {
+        // Use capacity from the element if available, otherwise use defaults based on table type/size
+        let capacity = tableElement.capacity || {
           min: 1,
           max: 4,
           default: 2
         };
         
-        // Adjust capacity based on table size
-        if (tableElement.type === 'round' && tableElement.size === 'large') {
-          capacity = { min: 4, max: 8, default: 6 };
-        } else if (tableElement.type === 'square' && tableElement.size === 'large') {
-          capacity = { min: 4, max: 6, default: 4 };
-        } else if (tableElement.type === 'rectangle') {
-          capacity = { min: 2, max: 6, default: 4 };
-          if (tableElement.size === 'large') {
+        // If no custom capacity has been set, adjust capacity based on table size
+        if (!tableElement.capacity) {
+          if (tableElement.type === 'round' && tableElement.size === 'large') {
             capacity = { min: 4, max: 8, default: 6 };
+          } else if (tableElement.type === 'square' && tableElement.size === 'large') {
+            capacity = { min: 4, max: 6, default: 4 };
+          } else if (tableElement.type === 'rectangle') {
+            capacity = { min: 2, max: 6, default: 4 };
+            if (tableElement.size === 'large') {
+              capacity = { min: 4, max: 8, default: 6 };
+            }
           }
         }
         
@@ -185,9 +187,10 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
           type: 'table',
           shape: tableElement.isRound ? 'round' : tableElement.type,
           color: tableElement.color || '#8B4513', // Default to brown if no color specified
-          isReservable: true,
+          isReservable: tableElement.isReservable !== false, // Use the element's isReservable property or default to true
           status: 'available',
-          elementId: tableElement.id // Store reference to the floor plan element
+          elementId: tableElement.id, // Store reference to the floor plan element
+          size: tableElement.size || 'standard'
         };
         
         // Check if this table already exists as a seating area

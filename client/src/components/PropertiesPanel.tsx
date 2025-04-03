@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { FloorPlanElement } from "@/store/floorPlanStore";
-import { X, RotateCcw, Type, Move, SquareIcon, Palette } from "lucide-react";
+import { X, RotateCcw, Type, Move, SquareIcon, Palette, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 interface PropertiesPanelProps {
@@ -35,6 +36,11 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
   const [height, setHeight] = useState(selectedElement.height);
   const [rotation, setRotation] = useState(selectedElement.rotation);
   const [color, setColor] = useState(selectedElement.color || 'white');
+  const [minCapacity, setMinCapacity] = useState(selectedElement.capacity?.min || 1);
+  const [maxCapacity, setMaxCapacity] = useState(selectedElement.capacity?.max || 4);
+  const [defaultCapacity, setDefaultCapacity] = useState(selectedElement.capacity?.default || 2);
+  const [isReservable, setIsReservable] = useState(selectedElement.isReservable !== false);
+  const [size, setSize] = useState(selectedElement.size || 'standard');
   
   // Update state when selected element changes
   useEffect(() => {
@@ -45,6 +51,11 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
     setHeight(selectedElement.height);
     setRotation(selectedElement.rotation);
     setColor(selectedElement.color || 'white');
+    setMinCapacity(selectedElement.capacity?.min || 1);
+    setMaxCapacity(selectedElement.capacity?.max || 4);
+    setDefaultCapacity(selectedElement.capacity?.default || 2);
+    setIsReservable(selectedElement.isReservable !== false);
+    setSize(selectedElement.size || 'standard');
   }, [selectedElement]);
   
   // Handlers for updating properties
@@ -87,6 +98,37 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
   const handleColorChange = (value: string) => {
     setColor(value);
     updateElementProperty(selectedElement.id, 'color', value);
+  };
+  
+  const handleMinCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setMinCapacity(value);
+    const capacity = { min: value, max: maxCapacity, default: defaultCapacity };
+    updateElementProperty(selectedElement.id, 'capacity', capacity);
+  };
+  
+  const handleMaxCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setMaxCapacity(value);
+    const capacity = { min: minCapacity, max: value, default: defaultCapacity };
+    updateElementProperty(selectedElement.id, 'capacity', capacity);
+  };
+  
+  const handleDefaultCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setDefaultCapacity(value);
+    const capacity = { min: minCapacity, max: maxCapacity, default: value };
+    updateElementProperty(selectedElement.id, 'capacity', capacity);
+  };
+  
+  const handleIsReservableChange = (checked: boolean) => {
+    setIsReservable(checked);
+    updateElementProperty(selectedElement.id, 'isReservable', checked);
+  };
+  
+  const handleSizeChange = (value: string) => {
+    setSize(value);
+    updateElementProperty(selectedElement.id, 'size', value);
   };
   
   return (
@@ -222,6 +264,87 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
             ))}
           </div>
         </div>
+        
+        {/* Seating Capacity - Only show for tables */}
+        {selectedElement.category === 'table' && (
+          <div>
+            <div className="flex items-center mb-2">
+              <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+              <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Seating Capacity
+              </Label>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Select
+                  value={size}
+                  onValueChange={handleSizeChange}
+                >
+                  <SelectTrigger className="w-full py-1 h-auto text-sm">
+                    <SelectValue placeholder="Table Size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Small</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="large">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label htmlFor="min-capacity" className="text-xs text-muted-foreground block mb-1">Min</Label>
+                  <Input 
+                    id="min-capacity"
+                    type="number"
+                    min={1}
+                    max={maxCapacity}
+                    value={minCapacity}
+                    onChange={handleMinCapacityChange}
+                    className="py-1 px-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="default-capacity" className="text-xs text-muted-foreground block mb-1">Default</Label>
+                  <Input 
+                    id="default-capacity"
+                    type="number"
+                    min={minCapacity}
+                    max={maxCapacity}
+                    value={defaultCapacity}
+                    onChange={handleDefaultCapacityChange}
+                    className="py-1 px-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="max-capacity" className="text-xs text-muted-foreground block mb-1">Max</Label>
+                  <Input 
+                    id="max-capacity"
+                    type="number"
+                    min={minCapacity}
+                    value={maxCapacity}
+                    onChange={handleMaxCapacityChange}
+                    className="py-1 px-2 text-sm"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2 pt-1">
+                <Switch 
+                  id="is-reservable"
+                  checked={isReservable}
+                  onCheckedChange={handleIsReservableChange}
+                />
+                <Label 
+                  htmlFor="is-reservable" 
+                  className="text-sm cursor-pointer"
+                >
+                  Reservable
+                </Label>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
           <div className="flex items-center justify-between">

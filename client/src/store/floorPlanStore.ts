@@ -19,6 +19,13 @@ export interface FloorPlanElement {
   color?: string;
   isRound?: boolean; // Used for circular elements like round tables
   zIndex: number; // Used for layering elements
+  capacity?: {
+    min: number;
+    max: number;
+    default: number;
+  };
+  size?: string; // e.g., 'small', 'medium', 'large'
+  isReservable?: boolean; // Whether this element can be reserved (for tables)
 }
 
 interface DragElement {
