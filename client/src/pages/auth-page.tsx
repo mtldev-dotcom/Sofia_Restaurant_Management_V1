@@ -28,11 +28,35 @@ const registerSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   role: z.string().default("user"),
+  restaurantOption: z.enum(["create", "join", "none"]).default("none"),
+  restaurantName: z.string().optional(),
+  restaurantAddress: z.string().optional(),
+  inviteCode: z.string().optional(),
 })
 .refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-});
+})
+.refine(
+  (data) => 
+    data.restaurantOption === "none" || 
+    (data.restaurantOption === "create" && data.restaurantName) || 
+    (data.restaurantOption === "join" && data.inviteCode),
+  {
+    message: "Restaurant name is required when creating a new restaurant",
+    path: ["restaurantName"],
+  }
+)
+.refine(
+  (data) => 
+    data.restaurantOption === "none" || 
+    (data.restaurantOption === "create" && data.restaurantName) || 
+    (data.restaurantOption === "join" && data.inviteCode),
+  {
+    message: "Invite code is required when joining a restaurant",
+    path: ["inviteCode"],
+  }
+);
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
@@ -65,6 +89,10 @@ export default function AuthPage() {
       firstName: "",
       lastName: "",
       role: "user",
+      restaurantOption: "none",
+      restaurantName: "",
+      restaurantAddress: "",
+      inviteCode: "",
     },
   });
 
@@ -247,6 +275,99 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+
+                      <div className="space-y-4 pt-4 border-t">
+                        <h3 className="font-medium text-center">Restaurant Options</h3>
+                        <FormField
+                          control={registerForm.control}
+                          name="restaurantOption"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel>Choose an option</FormLabel>
+                              <FormControl>
+                                <div className="flex flex-col space-y-2">
+                                  <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      className="h-4 w-4 text-primary"
+                                      checked={field.value === "create"}
+                                      onChange={() => field.onChange("create")}
+                                    />
+                                    <span>Create a new restaurant</span>
+                                  </label>
+                                  <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      className="h-4 w-4 text-primary"
+                                      checked={field.value === "join"}
+                                      onChange={() => field.onChange("join")}
+                                    />
+                                    <span>Join an existing restaurant with invite code</span>
+                                  </label>
+                                  <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      className="h-4 w-4 text-primary"
+                                      checked={field.value === "none"}
+                                      onChange={() => field.onChange("none")}
+                                    />
+                                    <span>I'll set this up later</span>
+                                  </label>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {registerForm.watch("restaurantOption") === "create" && (
+                          <>
+                            <FormField
+                              control={registerForm.control}
+                              name="restaurantName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Restaurant Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="My Restaurant" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={registerForm.control}
+                              name="restaurantAddress"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Restaurant Address (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="123 Main St, City, Country" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </>
+                        )}
+
+                        {registerForm.watch("restaurantOption") === "join" && (
+                          <FormField
+                            control={registerForm.control}
+                            name="inviteCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Invite Code</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter your invite code" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+
                       <Button 
                         type="submit" 
                         className="w-full" 

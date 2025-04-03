@@ -54,6 +54,7 @@ export interface IStorage {
   
   // Restaurant Users methods
   getRestaurantUsers(restaurantId: string): Promise<RestaurantUser[]>;
+  linkUserToRestaurant(userId: string, restaurantId: string, role: string): Promise<RestaurantUser>;
   
   // Current user methods
   getCurrentUserRestaurants(userId: string): Promise<{ restaurant: Restaurant, role: string }[]>;
@@ -538,6 +539,67 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error fetching restaurant users:', error);
       return [];
+    }
+  }
+  
+  async linkUserToRestaurant(userId: string, restaurantId: string, role: string): Promise<RestaurantUser> {
+    try {
+      // First check if the user and restaurant exist
+      const user = await this.getUserById(userId);
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      const restaurant = await this.getRestaurant(restaurantId);
+      if (!restaurant) {
+        throw new Error(`Restaurant with ID ${restaurantId} not found`);
+      }
+      
+      // Check if the relationship already exists
+      const existingRelationships = await db
+        .select()
+        .from(restaurantUsers)
+        .where(and(
+          eq(restaurantUsers.userId, userId),
+          eq(restaurantUsers.restaurantId, restaurantId)
+        ));
+      
+      if (existingRelationships.length > 0) {
+        // If it exists but role is different, update it
+        if (existingRelationships[0].role !== role) {
+          const results = await db
+            .update(restaurantUsers)
+            .set({ role })
+            .where(and(
+              eq(restaurantUsers.userId, userId),
+              eq(restaurantUsers.restaurantId, restaurantId)
+            ))
+            .returning();
+          
+          return results[0];
+        }
+        
+        return existingRelationships[0];
+      }
+      
+      // Create a new relationship
+      const results = await db
+        .insert(restaurantUsers)
+        .values({
+          userId,
+          restaurantId,
+          role
+        })
+        .returning();
+      
+      if (results.length === 0) {
+        throw new Error('Failed to link user to restaurant');
+      }
+      
+      return results[0];
+    } catch (error) {
+      console.error('Error linking user to restaurant:', error);
+      throw new Error(`Failed to link user to restaurant: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   

@@ -104,10 +104,41 @@ export function setupAuth(app: Express) {
       // Hash the password before storing
       const hashedPassword = await hashPassword(req.body.password);
       
+      // Extract restaurant data from request body
+      const { 
+        restaurantOption, 
+        restaurantName, 
+        restaurantAddress, 
+        inviteCode, 
+        confirmPassword,
+        ...userData 
+      } = req.body;
+
+      // Create the user
       const user = await storage.createUser({
-        ...req.body,
+        ...userData,
         password: hashedPassword,
       });
+
+      // Handle restaurant creation or joining
+      if (restaurantOption === "create" && restaurantName) {
+        // Create a new restaurant for the user
+        const restaurant = await storage.createRestaurant({
+          name: restaurantName,
+          address: restaurantAddress || "",
+          ownerId: user.id,
+          status: "active",
+        });
+
+        // Add the user as the owner/admin of the restaurant
+        await storage.linkUserToRestaurant(user.id, restaurant.id, "owner");
+      } 
+      else if (restaurantOption === "join" && inviteCode) {
+        // Attempt to join a restaurant with the invite code
+        // This functionality will need to be implemented later
+        console.log(`User ${user.id} attempting to join a restaurant with invite code: ${inviteCode}`);
+        // For now, we'll just log it and not actually implement the invite code joining
+      }
 
       // Login the user after registration
       req.login(user, (err) => {

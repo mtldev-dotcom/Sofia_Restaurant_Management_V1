@@ -201,6 +201,7 @@ export const insertRestaurantSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  status: z.enum(["active", "inactive", "pending"]).default("active"),
 });
 
 // Schema for updating restaurants
