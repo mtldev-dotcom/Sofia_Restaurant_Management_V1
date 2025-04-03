@@ -39,6 +39,27 @@ const getToken = (req: Request): string | null => {
 };
 
 export function setupAuth(app: Express) {
+  // Callback route for Supabase auth redirects
+  app.get("/auth/callback", async (req, res) => {
+    const code = req.query.code as string;
+    
+    if (code) {
+      // Exchange auth code for session
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (error) {
+        console.error('Error exchanging code for session:', error);
+        return res.redirect('/auth?error=auth_callback_error');
+      }
+      
+      if (data.session) {
+        res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
+      }
+    }
+    
+    // Redirect to home page
+    res.redirect('/');
+  });
   const sessionStore = new PostgresSessionStore({
     pool,
     tableName: 'sessions',
@@ -106,7 +127,8 @@ export function setupAuth(app: Express) {
             username,
             first_name: firstName,
             last_name: lastName,
-          }
+          },
+          emailRedirectTo: `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`
         }
       });
       

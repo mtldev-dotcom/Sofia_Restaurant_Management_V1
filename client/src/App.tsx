@@ -15,6 +15,12 @@ function Router() {
       <ProtectedRoute path="/" component={Home} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/auth/callback">
+        {() => {
+          // This is just a placeholder component since the server handles the redirect
+          return <div>Processing authentication...</div>;
+        }}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
