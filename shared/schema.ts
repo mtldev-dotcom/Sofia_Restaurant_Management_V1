@@ -142,8 +142,8 @@ export const seatingAreas = pgTable("seating_areas", {
   name: text("name"),
   capacityRange: jsonb("capacity_range"),
   description: text("description"),
-  x: numeric("x"),
-  y: numeric("y"),
+  x: text("x"),
+  y: text("y"),
   properties: jsonb("properties"), 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });

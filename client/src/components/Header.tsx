@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import ThemeToggle from "@/components/ThemeToggle";
-import NavigationSidebar from "@/components/NavigationSidebar";
-import { Save, Upload, Layout, Trash2, AlertCircle, Loader2, FilePlus } from "lucide-react";
+import { Save, Upload, Layout, Trash2, AlertCircle, Loader2, FilePlus, Menu } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +17,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface HeaderProps {
+  title?: string;
   onSave: () => void;
   onLoad: () => void;
   onDelete?: () => void;
   onNew?: () => void;
+  onMenuClick?: () => void;
 }
 
-const Header = ({ onSave, onLoad, onDelete, onNew }: HeaderProps) => {
+const Header = ({ title = "Floor Plan Designer", onSave, onLoad, onDelete, onNew, onMenuClick }: HeaderProps) => {
   const floorPlanName = useFloorPlanStore((state) => state.name);
   const floorPlanId = useFloorPlanStore((state) => state.id);
   const isDefault = useFloorPlanStore((state) => state.isDefault);
@@ -189,13 +191,18 @@ const Header = ({ onSave, onLoad, onDelete, onNew }: HeaderProps) => {
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center">
-            <NavigationSidebar />
+            {onMenuClick && (
+              <Button variant="ghost" size="icon" className="mr-2" onClick={onMenuClick}>
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            )}
             <div className="text-primary w-8 h-8 mr-3 flex items-center justify-center">
               <Layout className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-semibold text-foreground">
-              Floor Plan Designer
-              {floorPlanName && (
+              {title}
+              {floorPlanName && title === "Floor Plan Designer" && (
                 <span className="text-sm text-muted-foreground ml-2 font-normal">
                   ({floorPlanName})
                 </span>
@@ -203,43 +210,47 @@ const Header = ({ onSave, onLoad, onDelete, onNew }: HeaderProps) => {
             </h1>
           </div>
           <div className="flex items-center space-x-3">
-            <Button 
-              onClick={handleNewClick}
-              className="inline-flex items-center"
-              size="sm"
-              variant="outline"
-            >
-              <FilePlus className="mr-1.5 h-4 w-4" />
-              New
-            </Button>
-            <Button 
-              onClick={onSave} 
-              className="inline-flex items-center"
-              size="sm"
-            >
-              <Save className="mr-1.5 h-4 w-4" />
-              Save
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={onLoad} 
-              className="inline-flex items-center"
-              size="sm"
-            >
-              <Upload className="mr-1.5 h-4 w-4" />
-              Load
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleDeleteClick} 
-              className={`inline-flex items-center ${!floorPlanId || isDefault ? 'opacity-50 cursor-not-allowed' : ''}`}
-              size="sm"
-              disabled={!floorPlanId || isDefault}
-              title={!floorPlanId ? "No floor plan loaded" : isDefault ? "Cannot delete default floor plan" : "Delete this floor plan"}
-            >
-              <Trash2 className="mr-1.5 h-4 w-4 text-destructive" />
-              Delete
-            </Button>
+            {title === "Floor Plan Designer" && (
+              <>
+                <Button 
+                  onClick={handleNewClick}
+                  className="inline-flex items-center"
+                  size="sm"
+                  variant="outline"
+                >
+                  <FilePlus className="mr-1.5 h-4 w-4" />
+                  New
+                </Button>
+                <Button 
+                  onClick={onSave} 
+                  className="inline-flex items-center"
+                  size="sm"
+                >
+                  <Save className="mr-1.5 h-4 w-4" />
+                  Save
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={onLoad} 
+                  className="inline-flex items-center"
+                  size="sm"
+                >
+                  <Upload className="mr-1.5 h-4 w-4" />
+                  Load
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDeleteClick} 
+                  className={`inline-flex items-center ${!floorPlanId || isDefault ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  size="sm"
+                  disabled={!floorPlanId || isDefault}
+                  title={!floorPlanId ? "No floor plan loaded" : isDefault ? "Cannot delete default floor plan" : "Delete this floor plan"}
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4 text-destructive" />
+                  Delete
+                </Button>
+              </>
+            )}
             <div className="ml-2">
               <ThemeToggle />
             </div>

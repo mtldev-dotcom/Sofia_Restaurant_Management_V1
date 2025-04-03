@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import EditorPanel from "@/components/EditorPanel";
 import PropertiesPanel from "@/components/PropertiesPanel";
 import SaveLayoutModal from "@/components/SaveLayoutModal";
 import LoadLayoutModal from "@/components/LoadLayoutModal";
+import AppLayout from "@/components/AppLayout";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -43,49 +43,34 @@ const Home = () => {
   }, []);
   
   return (
-    <div className="bg-background min-h-screen h-screen text-foreground flex flex-col overflow-hidden">
-      <Header 
-        onSave={() => setIsSaveModalOpen(true)}
-        onLoad={() => setIsLoadModalOpen(true)}
-        onDelete={() => {
-          // Refresh the floor plans list in the load modal
-          const queryKey = ['/api/restaurants', DEMO_RESTAURANT_ID, 'floorplans'];
-          queryClient.invalidateQueries({ queryKey });
-        }}
-        onNew={() => {
-          // Reset has already been called in Header, just update UI as needed
-          toast({
-            title: "Ready to design",
-            description: "Start by dragging elements from the sidebar"
-          });
-        }}
-      />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <EditorPanel />
-        
-        {selectedElement && (
-          <PropertiesPanel 
-            selectedElement={selectedElement}
-            onClose={() => useFloorPlanStore.getState().selectElement(null)}
-          />
-        )}
-      </div>
+    <AppLayout>
+      <div className="h-screen flex flex-col overflow-hidden">
+        <div className="flex-1 flex overflow-hidden">
+          <Sidebar />
+          <EditorPanel />
+          
+          {selectedElement && (
+            <PropertiesPanel 
+              selectedElement={selectedElement}
+              onClose={() => useFloorPlanStore.getState().selectElement(null)}
+            />
+          )}
+        </div>
 
-      <SaveLayoutModal 
-        isOpen={isSaveModalOpen}
-        onClose={() => setIsSaveModalOpen(false)}
-        restaurantId={DEMO_RESTAURANT_ID}
-        userId={DEMO_USER_ID}
-      />
-      
-      <LoadLayoutModal 
-        isOpen={isLoadModalOpen}
-        onClose={() => setIsLoadModalOpen(false)}
-        restaurantId={DEMO_RESTAURANT_ID}
-      />
-    </div>
+        <SaveLayoutModal 
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          restaurantId={DEMO_RESTAURANT_ID}
+          userId={DEMO_USER_ID}
+        />
+        
+        <LoadLayoutModal 
+          isOpen={isLoadModalOpen}
+          onClose={() => setIsLoadModalOpen(false)}
+          restaurantId={DEMO_RESTAURANT_ID}
+        />
+      </div>
+    </AppLayout>
   );
 };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Header from "@/components/Header";
+import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -38,13 +38,7 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="bg-background min-h-screen text-foreground flex flex-col">
-      <Header 
-        onSave={() => {}}
-        onLoad={() => {}}
-        onNew={() => {}}
-      />
-      
+    <AppLayout>
       <div className="flex-1 p-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
@@ -153,7 +147,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
