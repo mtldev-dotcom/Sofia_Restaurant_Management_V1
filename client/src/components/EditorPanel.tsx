@@ -3,6 +3,20 @@ import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import CanvasElement from "@/components/CanvasElement";
 import { snapToGrid } from "@/lib/utils";
+import { 
+  Undo2, 
+  Redo2, 
+  Trash2, 
+  Copy, 
+  Layers, 
+  SendToBack, 
+  ZoomIn, 
+  ZoomOut,
+  Grid3x3
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 const EditorPanel = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -94,140 +108,169 @@ const EditorPanel = () => {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Editor Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!canUndo}
-            onClick={undo}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 14 4 9l5-5"></path>
-              <path d="M4 9h10a5 5 0 0 1 5 5v6"></path>
-            </svg>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!canRedo}
-            onClick={redo}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 14 5-5-5-5"></path>
-              <path d="M20 9H10a5 5 0 0 0-5 5v6"></path>
-            </svg>
-          </Button>
-          <div className="h-6 border-l border-gray-300 mx-2"></div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!selectedElement}
-            onClick={deleteSelectedElement}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!selectedElement}
-            onClick={duplicateSelectedElement}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="8" y="8" width="12" height="12" rx="2" ry="2"></rect>
-              <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path>
-            </svg>
-          </Button>
-          <div className="h-6 border-l border-gray-300 mx-2"></div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!selectedElement}
-            onClick={bringForward}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="8" y="4" width="12" height="12" rx="2" ry="2"></rect>
-              <rect x="4" y="8" width="12" height="12" rx="2" ry="2"></rect>
-            </svg>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            disabled={!selectedElement}
-            onClick={sendBackward}
-            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="12" height="12" rx="2" ry="2"></rect>
-              <rect x="8" y="8" width="12" height="12" rx="2" ry="2"></rect>
-            </svg>
-          </Button>
+      <div className="bg-background border-b border-border px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center space-x-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!canUndo}
+                  onClick={undo}
+                  className="rounded-md"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Undo</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!canRedo}
+                  onClick={redo}
+                  className="rounded-md"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Redo</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!selectedElement}
+                  onClick={deleteSelectedElement}
+                  className="rounded-md"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!selectedElement}
+                  onClick={duplicateSelectedElement}
+                  className="rounded-md"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicate</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!selectedElement}
+                  onClick={bringForward}
+                  className="rounded-md"
+                >
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Bring Forward</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  disabled={!selectedElement}
+                  onClick={sendBackward}
+                  className="rounded-md"
+                >
+                  <SendToBack className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Send Backward</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-        <div className="flex items-center space-x-4">
+        
+        <div className="flex items-center space-x-3">
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleZoomOut}
-              className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-              </svg>
-            </Button>
-            <span className="mx-2 text-sm text-gray-600">{zoom}%</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleZoomIn}
-              className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="11" y1="8" x2="11" y2="14"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-              </svg>
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleZoomOut}
+                    className="rounded-md"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Zoom Out</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <span className="mx-2 text-sm text-muted-foreground font-medium w-12 text-center">{zoom}%</span>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleZoomIn}
+                    className="rounded-md"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Zoom In</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">Snap to Grid</span>
-            <button 
-              onClick={() => setGridSnap(!gridSnap)}
-              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${gridSnap ? 'bg-primary-600' : 'bg-gray-200'}`}
-            >
-              <span 
-                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${gridSnap ? 'translate-x-5' : 'translate-x-0'}`}
-              ></span>
-            </button>
+          
+          <div className="flex items-center space-x-2">
+            <Grid3x3 className="h-4 w-4 text-muted-foreground" />
+            <Switch 
+              id="grid-snap"
+              checked={gridSnap}
+              onCheckedChange={setGridSnap}
+              className="data-[state=checked]:bg-primary"
+            />
           </div>
         </div>
       </div>
 
       {/* Canvas Editor Area */}
-      <div className="flex-1 overflow-auto relative bg-gray-100 p-4">
+      <div className="flex-1 overflow-auto relative bg-muted p-6">
         <div 
           ref={canvasRef}
           onClick={handleCanvasClick}
           onMouseUp={handleCanvasInteraction}
-          className="canvas-container w-full h-full relative bg-white shadow-md overflow-hidden" 
+          className="canvas-container w-full h-full relative bg-background shadow-md overflow-hidden rounded-md" 
           style={{
             backgroundImage: `
-              linear-gradient(to right, rgba(243, 244, 246, 0.5) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(243, 244, 246, 0.5) 1px, transparent 1px)
+              linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),
+              linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)
             `,
             backgroundSize: `${20 * (zoom / 100)}px ${20 * (zoom / 100)}px`,
             transform: `scale(${zoom / 100})`,

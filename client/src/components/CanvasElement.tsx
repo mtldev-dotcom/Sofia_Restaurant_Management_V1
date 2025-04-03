@@ -35,13 +35,17 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
     transform: `rotate(${element.rotation}deg)`,
     backgroundColor: getBackgroundColor(),
     zIndex: element.zIndex || 0,
-    border: isSelected ? '2px solid #3B82F6' : '2px solid #9CA3AF',
-    borderRadius: element.isRound ? '50%' : '2px',
+    border: isSelected ? '2px solid hsl(var(--primary))' : '1px solid hsl(var(--border))',
+    borderRadius: element.isRound ? '50%' : '4px',
     position: 'absolute',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: isSelected ? '0 0 0 1px rgba(59, 130, 246, 0.5)' : 'none',
+    boxShadow: isSelected 
+      ? '0 0 0 2px hsl(var(--primary) / 0.2), 0 4px 8px hsl(var(--foreground) / 0.1)' 
+      : '0 1px 3px hsl(var(--foreground) / 0.1)',
+    userSelect: 'none',
+    transition: 'box-shadow 0.2s ease',
   };
   
   function getBackgroundColor() {
@@ -302,13 +306,14 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
             style={{
               width: '8px',
               height: '8px',
-              backgroundColor: 'white',
-              border: '1px solid #3B82F6',
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '50%',
               position: 'absolute',
               top: '-4px',
               left: '-4px',
-              cursor: 'nwse-resize'
+              cursor: 'nwse-resize',
+              boxShadow: '0 0 0 1px hsl(var(--background))'
             }}
           ></div>
           <div 
@@ -317,13 +322,14 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
             style={{
               width: '8px',
               height: '8px',
-              backgroundColor: 'white',
-              border: '1px solid #3B82F6',
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '50%',
               position: 'absolute',
               top: '-4px',
               right: '-4px',
-              cursor: 'nesw-resize'
+              cursor: 'nesw-resize',
+              boxShadow: '0 0 0 1px hsl(var(--background))'
             }}
           ></div>
           <div 
@@ -332,13 +338,14 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
             style={{
               width: '8px',
               height: '8px',
-              backgroundColor: 'white',
-              border: '1px solid #3B82F6',
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '50%',
               position: 'absolute',
               bottom: '-4px',
               left: '-4px',
-              cursor: 'nesw-resize'
+              cursor: 'nesw-resize',
+              boxShadow: '0 0 0 1px hsl(var(--background))'
             }}
           ></div>
           <div 
@@ -347,13 +354,14 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
             style={{
               width: '8px',
               height: '8px',
-              backgroundColor: 'white',
-              border: '1px solid #3B82F6',
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '50%',
               position: 'absolute',
               bottom: '-4px',
               right: '-4px',
-              cursor: 'nwse-resize'
+              cursor: 'nwse-resize',
+              boxShadow: '0 0 0 1px hsl(var(--background))'
             }}
           ></div>
           
@@ -362,19 +370,20 @@ const CanvasElement = ({ element, isSelected, gridSnap }: CanvasElementProps) =>
             className="element-handle rotate-handle" 
             onMouseDown={(e) => handleMouseDown(e, 'rotate')}
             style={{
-              width: '8px',
-              height: '8px',
-              backgroundColor: 'white',
-              border: '1px solid #3B82F6',
+              width: '10px',
+              height: '10px',
+              backgroundColor: 'hsl(var(--primary))',
+              border: '1px solid hsl(var(--primary))',
               borderRadius: '50%',
               position: 'absolute',
               top: '-20px',
               left: '50%',
               transform: 'translateX(-50%)',
-              cursor: 'grab'
+              cursor: 'grab',
+              boxShadow: '0 0 0 1px hsl(var(--background)), 0 2px 4px hsl(var(--foreground) / 0.1)'
             }}
           >
-            <svg className="text-primary-600 w-3 h-3" style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)' }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="text-background w-3 h-3" style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)' }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
           </div>

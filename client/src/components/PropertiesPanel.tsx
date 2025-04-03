@@ -3,14 +3,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Panel, PanelHeader, PanelBody } from "@/components/ui/panel";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { FloorPlanElement } from "@/store/floorPlanStore";
+import { X, RotateCcw, Type, Move, SquareIcon, Palette } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PropertiesPanelProps {
   selectedElement: FloorPlanElement;
   onClose: () => void;
 }
+
+const colorOptions = [
+  { value: "white", label: "White", class: "bg-white border border-gray-200" },
+  { value: "gray", label: "Gray", class: "bg-gray-200" },
+  { value: "beige", label: "Beige", class: "bg-amber-50" },
+  { value: "brown", label: "Brown", class: "bg-amber-800" },
+  { value: "green", label: "Green", class: "bg-green-100" },
+  { value: "blue", label: "Blue", class: "bg-blue-100" },
+  { value: "purple", label: "Purple", class: "bg-purple-100" },
+];
 
 const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => {
   const updateElementProperty = useFloorPlanStore((state) => state.updateElementProperty);
@@ -77,116 +90,151 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
   };
   
   return (
-    <Panel variant="floating" className="fixed right-4 top-24 w-64 z-10">
-      <PanelHeader className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-900">Properties</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </PanelHeader>
-      <PanelBody>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="element-name">Element Name</Label>
-            <Input 
-              id="element-name"
-              value={name}
-              onChange={handleNameChange}
-              className="mt-1"
-            />
+    <Card className="fixed right-4 top-24 w-72 z-10 shadow-lg border border-border bg-card">
+      <CardHeader className="px-4 py-3 flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center text-sm font-medium">
+          <h3 className="text-foreground">Element Properties</h3>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+          <X className="h-4 w-4" />
+        </Button>
+      </CardHeader>
+      <CardContent className="px-4 py-3 space-y-5">
+        <div>
+          <div className="flex items-center mb-2">
+            <Type className="h-4 w-4 mr-2 text-muted-foreground" />
+            <Label htmlFor="element-name" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Name
+            </Label>
           </div>
-          
-          <div>
-            <Label>Position</Label>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="position-x" className="text-xs text-gray-500">X</Label>
-                <Input 
-                  id="position-x"
-                  type="number"
-                  value={posX}
-                  onChange={handlePosXChange}
-                  className="py-1 px-2 text-sm"
-                />
-              </div>
-              <div>
-                <Label htmlFor="position-y" className="text-xs text-gray-500">Y</Label>
-                <Input 
-                  id="position-y"
-                  type="number"
-                  value={posY}
-                  onChange={handlePosYChange}
-                  className="py-1 px-2 text-sm"
-                />
-              </div>
+          <Input 
+            id="element-name"
+            value={name}
+            onChange={handleNameChange}
+          />
+        </div>
+        
+        <div>
+          <div className="flex items-center mb-2">
+            <Move className="h-4 w-4 mr-2 text-muted-foreground" />
+            <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Position
+            </Label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="position-x" className="text-xs text-muted-foreground block mb-1">X</Label>
+              <Input 
+                id="position-x"
+                type="number"
+                value={posX}
+                onChange={handlePosXChange}
+                className="py-1 px-2 text-sm"
+              />
             </div>
-          </div>
-          
-          <div>
-            <Label>Size</Label>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="size-width" className="text-xs text-gray-500">Width</Label>
-                <Input 
-                  id="size-width"
-                  type="number"
-                  value={width}
-                  onChange={handleWidthChange}
-                  className="py-1 px-2 text-sm"
-                />
-              </div>
-              <div>
-                <Label htmlFor="size-height" className="text-xs text-gray-500">Height</Label>
-                <Input 
-                  id="size-height"
-                  type="number"
-                  value={height}
-                  onChange={handleHeightChange}
-                  className="py-1 px-2 text-sm"
-                />
-              </div>
+            <div>
+              <Label htmlFor="position-y" className="text-xs text-muted-foreground block mb-1">Y</Label>
+              <Input 
+                id="position-y"
+                type="number"
+                value={posY}
+                onChange={handlePosYChange}
+                className="py-1 px-2 text-sm"
+              />
             </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="element-rotation">Rotation</Label>
-            <Slider
-              id="element-rotation"
-              min={0}
-              max={360}
-              step={1}
-              value={[rotation]}
-              onValueChange={handleRotationChange}
-              className="mt-2"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0°</span>
-              <span>180°</span>
-              <span>360°</span>
-            </div>
-          </div>
-          
-          <div>
-            <Label htmlFor="element-color">Color</Label>
-            <Select value={color} onValueChange={handleColorChange}>
-              <SelectTrigger id="element-color" className="mt-1">
-                <SelectValue placeholder="Select a color" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="white">White</SelectItem>
-                <SelectItem value="gray">Gray</SelectItem>
-                <SelectItem value="beige">Beige</SelectItem>
-                <SelectItem value="brown">Brown</SelectItem>
-                <SelectItem value="green">Green</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
-      </PanelBody>
-    </Panel>
+        
+        <div>
+          <div className="flex items-center mb-2">
+            <SquareIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+            <Label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Size
+            </Label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="size-width" className="text-xs text-muted-foreground block mb-1">Width</Label>
+              <Input 
+                id="size-width"
+                type="number"
+                value={width}
+                onChange={handleWidthChange}
+                className="py-1 px-2 text-sm"
+              />
+            </div>
+            <div>
+              <Label htmlFor="size-height" className="text-xs text-muted-foreground block mb-1">Height</Label>
+              <Input 
+                id="size-height"
+                type="number"
+                value={height}
+                onChange={handleHeightChange}
+                className="py-1 px-2 text-sm"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <div className="flex items-center mb-2">
+            <RotateCcw className="h-4 w-4 mr-2 text-muted-foreground" />
+            <Label htmlFor="element-rotation" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Rotation
+            </Label>
+          </div>
+          <Slider
+            id="element-rotation"
+            min={0}
+            max={360}
+            step={1}
+            value={[rotation]}
+            onValueChange={handleRotationChange}
+            className="py-1"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>0°</span>
+            <span>{rotation}°</span>
+            <span>360°</span>
+          </div>
+        </div>
+        
+        <div>
+          <div className="flex items-center mb-2">
+            <Palette className="h-4 w-4 mr-2 text-muted-foreground" />
+            <Label htmlFor="element-color" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Color
+            </Label>
+          </div>
+          <div className="grid grid-cols-7 gap-2 mt-2">
+            {colorOptions.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleColorChange(option.value)}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border",
+                  option.class,
+                  color === option.value && "ring-2 ring-primary ring-offset-2"
+                )}
+                title={option.label}
+                type="button"
+              />
+            ))}
+          </div>
+        </div>
+        
+        <div className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
+          <div className="flex items-center justify-between">
+            <span>Element ID:</span>
+            <span className="font-mono">{selectedElement.id.substring(0, 8)}</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span>Type:</span>
+            <span className="capitalize">{selectedElement.category} / {selectedElement.type}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

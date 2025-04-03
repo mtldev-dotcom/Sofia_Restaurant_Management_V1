@@ -13,7 +13,7 @@ const Home = () => {
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);
   
   return (
-    <div className="bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden">
+    <div className="bg-background min-h-screen h-screen text-foreground flex flex-col overflow-hidden">
       <Header 
         onSave={() => setIsSaveModalOpen(true)}
         onLoad={() => setIsLoadModalOpen(true)}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Save } from "lucide-react";
 
 interface SaveLayoutModalProps {
   isOpen: boolean;
@@ -62,33 +63,39 @@ const SaveLayoutModal = ({ isOpen, onClose }: SaveLayoutModalProps) => {
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-md border border-border">
         <DialogHeader>
-          <DialogTitle>Save Layout</DialogTitle>
+          <div className="flex items-center">
+            <Save className="h-5 w-5 text-primary mr-2" />
+            <DialogTitle>Save Floor Plan</DialogTitle>
+          </div>
           <DialogDescription>
-            Save your current floor plan layout to access it later.
+            Save your current design to access it later.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="mt-4">
-          <Label htmlFor="layout-name" className="text-sm font-medium text-gray-700">
+        <div className="py-4">
+          <Label htmlFor="layout-name" className="text-sm font-medium">
             Layout Name
           </Label>
           <Input
             id="layout-name"
             value={layoutName}
             onChange={(e) => setLayoutName(e.target.value)}
-            placeholder="My Restaurant Layout"
-            className="mt-1"
+            placeholder="My Restaurant Design"
+            className="mt-1.5"
           />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Choose a descriptive name that helps you identify this layout easily.
+          </p>
         </div>
         
-        <DialogFooter className="mt-6">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save"}
+            {isSubmitting ? "Saving..." : "Save Layout"}
           </Button>
         </DialogFooter>
       </DialogContent>
