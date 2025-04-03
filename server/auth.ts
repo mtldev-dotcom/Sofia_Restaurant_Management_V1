@@ -166,22 +166,35 @@ export function setupAuth(app: Express) {
       });
       
       // Handle restaurant creation or joining
-      if (restaurantOption === "create" && restaurantName) {
-        // Create a new restaurant for the user
-        const restaurant = await storage.createRestaurant({
-          name: restaurantName,
-          address: restaurantAddress || "",
-          ownerId: user.id,
-          status: "active",
-        });
+      console.log('Restaurant options:', { restaurantOption, restaurantName, restaurantAddress });
 
-        // Add the user as the owner/admin of the restaurant
-        await storage.linkUserToRestaurant(user.id, restaurant.id, "owner");
+      if (restaurantOption === "create" && restaurantName) {
+        console.log(`Creating restaurant "${restaurantName}" for user ${user.id}`);
+        try {
+          // Create a new restaurant for the user
+          const restaurant = await storage.createRestaurant({
+            name: restaurantName,
+            address: restaurantAddress || "",
+            ownerId: user.id,
+            status: "active",
+          });
+
+          console.log(`Restaurant created with ID: ${restaurant.id}`);
+
+          // Add the user as the owner/admin of the restaurant
+          await storage.linkUserToRestaurant(user.id, restaurant.id, "owner");
+          console.log(`User ${user.id} linked to restaurant ${restaurant.id} as owner`);
+        } catch (error) {
+          console.error('Error creating restaurant:', error);
+        }
       } 
       else if (restaurantOption === "join" && inviteCode) {
         // Attempt to join a restaurant with the invite code
         console.log(`User ${user.id} attempting to join a restaurant with invite code: ${inviteCode}`);
         // For now, we'll just log it
+      }
+      else {
+        console.log(`No restaurant created. Option: ${restaurantOption}, Name: ${restaurantName || 'None'}`);
       }
       
       // Set the session in the browser's cookies
