@@ -6,6 +6,8 @@ import {
   updateFloorPlanSchema,
   insertRestaurantSchema,
   updateRestaurantSchema,
+  insertSeatingAreaSchema,
+  updateSeatingAreaSchema,
   FloorPlanLayout
 } from "@shared/schema";
 import { z } from "zod";
@@ -147,6 +149,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (!success) {
       return res.status(404).json({ error: 'Floor plan not found' });
+    }
+    
+    res.status(204).end();
+  }));
+
+  // Seating Areas routes
+  app.get('/api/floorplans/:floorPlanId/seatingareas', handleErrors(async (req, res) => {
+    const floorPlanId = req.params.floorPlanId;
+    const seatingAreas = await storage.getSeatingAreasByFloorPlan(floorPlanId);
+    res.json(seatingAreas);
+  }));
+
+  app.get('/api/seatingareas/:id', handleErrors(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid seating area ID' });
+    }
+    
+    const seatingArea = await storage.getSeatingArea(id);
+    
+    if (!seatingArea) {
+      return res.status(404).json({ error: 'Seating area not found' });
+    }
+    
+    res.json(seatingArea);
+  }));
+
+  app.post('/api/seatingareas', handleErrors(async (req, res) => {
+    const data = insertSeatingAreaSchema.parse(req.body);
+    const seatingArea = await storage.createSeatingArea(data);
+    res.status(201).json(seatingArea);
+  }));
+
+  app.put('/api/seatingareas/:id', handleErrors(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid seating area ID' });
+    }
+    
+    const data = updateSeatingAreaSchema.parse(req.body);
+    
+    const seatingArea = await storage.updateSeatingArea(id, data);
+    if (!seatingArea) {
+      return res.status(404).json({ error: 'Seating area not found' });
+    }
+    
+    res.json(seatingArea);
+  }));
+
+  app.delete('/api/seatingareas/:id', handleErrors(async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid seating area ID' });
+    }
+    
+    const success = await storage.deleteSeatingArea(id);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Seating area not found' });
     }
     
     res.status(204).end();

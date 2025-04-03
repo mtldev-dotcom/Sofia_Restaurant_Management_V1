@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, integer, boolean, jsonb, timestamp, time, date, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, integer, boolean, jsonb, timestamp, time, date, numeric, bigint } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -135,6 +135,50 @@ export const bookingHistory = pgTable("booking_history", {
   notes: text("notes"),
 });
 
+// Seating Areas table schema
+export const seatingAreas = pgTable("seating_areas", {
+  id: bigint("id", { mode: "number" }).primaryKey().notNull(),
+  floorPlanId: uuid("id_floor_plan").notNull().references(() => floorPlans.id),
+  name: text("name"),
+  capacityRange: jsonb("capacity_range"),
+  description: text("description"),
+  x: numeric("x"),
+  y: numeric("y"),
+  properties: jsonb("properties"), 
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// Schema for capacity range in seating areas
+export const capacityRangeSchema = z.object({
+  min: z.number().int().min(1),
+  max: z.number().int().min(1),
+  default: z.number().int().min(1)
+});
+
+// Schema for seating area properties
+export const seatingAreaPropertiesSchema = z.object({
+  type: z.string(),
+  shape: z.string().optional(),
+  color: z.string().optional(),
+  isReservable: z.boolean().default(true),
+  status: z.enum(['available', 'occupied', 'reserved', 'maintenance']).default('available'),
+  additionalAttributes: z.record(z.string(), z.any()).optional()
+});
+
+// Schema for inserting seating areas
+export const insertSeatingAreaSchema = z.object({
+  floorPlanId: z.string().uuid(),
+  name: z.string().min(1, "Seating area name is required"),
+  capacityRange: capacityRangeSchema,
+  description: z.string().optional(),
+  x: z.number(),
+  y: z.number(),
+  properties: seatingAreaPropertiesSchema
+});
+
+// Schema for updating seating areas
+export const updateSeatingAreaSchema = insertSeatingAreaSchema.partial();
+
 // Schema for inserting floor plans
 export const insertFloorPlanSchema = z.object({
   restaurantId: z.string().uuid(),
@@ -174,6 +218,11 @@ export type Customer = typeof customers.$inferSelect;
 export type ScheduleService = typeof scheduleServices.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type BookingHistory = typeof bookingHistory.$inferSelect;
+export type SeatingArea = typeof seatingAreas.$inferSelect;
+export type InsertSeatingArea = z.infer<typeof insertSeatingAreaSchema>;
+export type UpdateSeatingArea = z.infer<typeof updateSeatingAreaSchema>;
+export type CapacityRange = z.infer<typeof capacityRangeSchema>;
+export type SeatingAreaProperties = z.infer<typeof seatingAreaPropertiesSchema>;
 
 // Floor plan layout types
 export type FloorPlanElement = z.infer<typeof elementSchema>;

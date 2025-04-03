@@ -8,11 +8,15 @@ import {
   type UpdateRestaurant,
   type RestaurantUser,
   type FloorPlanLayout,
+  type SeatingArea,
+  type InsertSeatingArea,
+  type UpdateSeatingArea,
   layoutSchema,
   users,
   restaurants,
   restaurantUsers,
-  floorPlans
+  floorPlans,
+  seatingAreas
 } from "@shared/schema";
 import { db } from './db';
 import { eq, and, desc } from 'drizzle-orm';
@@ -34,6 +38,13 @@ export interface IStorage {
   createFloorPlan(floorPlan: InsertFloorPlan): Promise<FloorPlan>;
   updateFloorPlan(id: string, floorPlan: UpdateFloorPlan): Promise<FloorPlan | null>;
   deleteFloorPlan(id: string): Promise<boolean>;
+  
+  // Seating Areas methods
+  getSeatingAreasByFloorPlan(floorPlanId: string): Promise<SeatingArea[]>;
+  getSeatingArea(id: number): Promise<SeatingArea | null>;
+  createSeatingArea(seatingArea: InsertSeatingArea): Promise<SeatingArea>;
+  updateSeatingArea(id: number, seatingArea: UpdateSeatingArea): Promise<SeatingArea | null>;
+  deleteSeatingArea(id: number): Promise<boolean>;
   
   // Restaurant Users methods
   getRestaurantUsers(restaurantId: string): Promise<RestaurantUser[]>;
@@ -315,6 +326,160 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Seating Areas methods
+  async getSeatingAreasByFloorPlan(floorPlanId: string): Promise<SeatingArea[]> {
+    try {
+      return await db
+        .select()
+        .from(seatingAreas)
+        .where(eq(seatingAreas.floorPlanId, floorPlanId))
+        .orderBy(seatingAreas.name);
+    } catch (error) {
+      console.error('Error fetching seating areas:', error);
+      return [];
+    }
+  }
+
+  async getSeatingArea(id: number): Promise<SeatingArea | null> {
+    try {
+      const query = `
+        SELECT * FROM seating_areas WHERE id = $1
+      `;
+      
+      const result = await db.execute(query, [id]);
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      // Convert the raw database row to SeatingArea type
+      const row = result.rows[0];
+      return {
+        id: Number(row.id),
+        floorPlanId: row.id_floor_plan,
+        name: row.name,
+        capacityRange: row.capacity_range,
+        description: row.description,
+        x: Number(row.x),
+        y: Number(row.y),
+        properties: row.properties,
+        createdAt: row.created_at
+      };
+    } catch (error) {
+      console.error('Error fetching seating area:', error);
+      return null;
+    }
+  }
+
+  async createSeatingArea(seatingArea: InsertSeatingArea): Promise<SeatingArea> {
+    try {
+      // Check if floor plan exists
+      const floorPlanCheck = await this.getFloorPlan(seatingArea.floorPlanId);
+      if (!floorPlanCheck) {
+        throw new Error(`Floor plan with ID ${seatingArea.floorPlanId} does not exist`);
+      }
+      
+      // Get the next available ID (we're using a manually managed bigint primary key)
+      const maxIdResult = await db.execute(
+        `SELECT MAX(id) as "maxId" FROM seating_areas`
+      );
+      const nextId = maxIdResult.rows[0]?.maxId ? Number(maxIdResult.rows[0].maxId) + 1 : 1;
+      
+      // Create the new seating area with SQL query
+      const insertQuery = `
+        INSERT INTO seating_areas (id, id_floor_plan, name, capacity_range, description, x, y, properties) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        RETURNING *
+      `;
+      
+      const results = await db.execute(insertQuery, [
+        nextId, 
+        seatingArea.floorPlanId, 
+        seatingArea.name, 
+        JSON.stringify(seatingArea.capacityRange), 
+        seatingArea.description, 
+        seatingArea.x, 
+        seatingArea.y, 
+        JSON.stringify(seatingArea.properties)
+      ]);
+      
+      if (results.rows.length === 0) {
+        throw new Error('Failed to create seating area');
+      }
+      
+      // Convert the raw database row to SeatingArea type
+      const row = results.rows[0];
+      return {
+        id: Number(row.id),
+        floorPlanId: row.id_floor_plan,
+        name: row.name,
+        capacityRange: row.capacity_range,
+        description: row.description,
+        x: Number(row.x),
+        y: Number(row.y),
+        properties: row.properties,
+        createdAt: row.created_at
+      };
+    } catch (error) {
+      console.error('Error creating seating area:', error);
+      throw new Error(`Failed to create seating area: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async updateSeatingArea(id: number, seatingArea: UpdateSeatingArea): Promise<SeatingArea | null> {
+    try {
+      // Check if the seating area exists
+      const existingSeatingArea = await this.getSeatingArea(id);
+      if (!existingSeatingArea) {
+        return null;
+      }
+      
+      // If floor plan ID is changed, verify the new floor plan exists
+      if (seatingArea.floorPlanId && seatingArea.floorPlanId !== existingSeatingArea.floorPlanId) {
+        const floorPlanCheck = await this.getFloorPlan(seatingArea.floorPlanId);
+        if (!floorPlanCheck) {
+          throw new Error(`Floor plan with ID ${seatingArea.floorPlanId} does not exist`);
+        }
+      }
+      
+      // Update values
+      const updateValues: any = {};
+      
+      if (seatingArea.floorPlanId) updateValues.floorPlanId = seatingArea.floorPlanId;
+      if (seatingArea.name) updateValues.name = seatingArea.name;
+      if (seatingArea.capacityRange) updateValues.capacityRange = seatingArea.capacityRange;
+      if (seatingArea.description !== undefined) updateValues.description = seatingArea.description;
+      if (seatingArea.x !== undefined) updateValues.x = seatingArea.x;
+      if (seatingArea.y !== undefined) updateValues.y = seatingArea.y;
+      if (seatingArea.properties) updateValues.properties = seatingArea.properties;
+      
+      const results = await db
+        .update(seatingAreas)
+        .set(updateValues)
+        .where(eq(seatingAreas.id, id))
+        .returning();
+      
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      console.error('Error updating seating area:', error);
+      return null;
+    }
+  }
+
+  async deleteSeatingArea(id: number): Promise<boolean> {
+    try {
+      const results = await db
+        .delete(seatingAreas)
+        .where(eq(seatingAreas.id, id))
+        .returning();
+      
+      return results.length > 0;
+    } catch (error) {
+      console.error('Error deleting seating area:', error);
+      return false;
+    }
+  }
+  
   // Restaurant Users methods
   async getRestaurantUsers(restaurantId: string): Promise<RestaurantUser[]> {
     try {
@@ -345,25 +510,25 @@ export class DatabaseStorage implements IStorage {
       // Get all restaurant IDs
       const restaurantIds = userRestaurants.map(ur => ur.restaurantId);
       
-      // Fetch all restaurants in one query
-      const restaurantList = await db
-        .select()
-        .from(restaurants)
-        .where(eq(restaurants.id, restaurantIds[0])); // We can't use an "in" clause easily here, so we'll filter afterwards
+      // Fetch all restaurants with matching IDs
+      const result = [];
       
-      // Create a map for easier lookup
-      const restaurantMap = new Map<string, Restaurant>();
-      for (const restaurant of restaurantList) {
-        restaurantMap.set(restaurant.id, restaurant);
+      for (const userRestaurant of userRestaurants) {
+        // Get restaurant for this restaurant user
+        const [restaurant] = await db
+          .select()
+          .from(restaurants)
+          .where(eq(restaurants.id, userRestaurant.restaurantId));
+        
+        if (restaurant) {
+          result.push({
+            restaurant,
+            role: userRestaurant.role
+          });
+        }
       }
       
-      // Combine the data
-      return userRestaurants
-        .filter(ur => restaurantMap.has(ur.restaurantId))
-        .map(ur => ({
-          restaurant: restaurantMap.get(ur.restaurantId)!,
-          role: ur.role
-        }));
+      return result;
     } catch (error) {
       console.error('Error fetching user restaurants:', error);
       return [];
