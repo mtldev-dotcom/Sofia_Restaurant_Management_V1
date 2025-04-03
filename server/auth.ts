@@ -293,8 +293,40 @@ export function setupAuth(app: Express) {
       
       console.log(`[auth] Found user in database with ID: ${dbUser.id}`);
       
-      // Validate credentials with our database password
-      const isCredentialValid = await storage.validateUserCredentials(dbUser.username, password);
+      // For migration, we'll try both username and email-based validation
+      // Some users might be logging in with email but our validateUserCredentials uses username
+      let isCredentialValid = await storage.validateUserCredentials(dbUser.username, password);
+      
+      // If username validation fails, try direct password check
+      if (!isCredentialValid) {
+        // Try to directly validate the password if stored in the database
+        try {
+          console.log(`[auth] Username validation failed, attempting direct password verification`);
+          
+          // Check if the stored password uses the correct format for our verification
+          const storedPassword = dbUser.password;
+          
+          if (storedPassword && storedPassword.includes('.')) {
+            // Import the verification function
+            const scryptAsync = require('util').promisify(require('crypto').scrypt);
+            const timingSafeEqual = require('crypto').timingSafeEqual;
+            
+            // Split the stored hash and salt
+            const [hashed, salt] = storedPassword.split(".");
+            if (hashed && salt) {
+              // Hash the supplied password with the same salt
+              const hashedBuf = Buffer.from(hashed, "hex");
+              const suppliedBuf = (await scryptAsync(password, salt, 64));
+              
+              // Compare the hashes using a time-constant comparison function
+              isCredentialValid = timingSafeEqual(hashedBuf, suppliedBuf);
+              console.log(`[auth] Direct password verification result: ${isCredentialValid}`);
+            }
+          }
+        } catch (pwError) {
+          console.error('[auth] Error during direct password verification:', pwError);
+        }
+      }
       
       if (!isCredentialValid) {
         console.log(`[auth] Migration failed: Invalid credentials for user ${dbUser.username}`);

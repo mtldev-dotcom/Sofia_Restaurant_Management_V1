@@ -1,0 +1,47 @@
+
+> rest-express@1.0.0 dev
+11:09:52 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Auth cookies: [Object: null prototype] {}
+[auth] No token found in request
+11:09:56 PM [express] GET /api/auth/user 401 in 5ms :: {"error":"Not authenticated"}
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZjZhYTI2My0yYzgxLTQ3MTQtOTRjMS1kZThkZGE1NTgxNmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI0NjU3LCJpYXQiOjE3NDM3MjEwNTcsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkJydW5vIiwidXNlcm5hbWUiOiJtdGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyMTA1N31dLCJzZXNzaW9uX2lkIjoiNjY0OGFhMjQtYjAzMS00MmMyLTgwZDgtNDgxZWZkZTQ4ZjBiIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.RZdQw1JKBNVn_zxWkQINP2NrLVFJlzkWqYnMsiIo4Lk'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 2f6aa263-2c81-4714-94c1-de8dda55816a
+[auth] User not found by ID, trying email lookup: me@nickybruno.com
+[auth] User found by email, need to update ID
+[auth] User has restaurant associations, using migration dialog instead
+11:09:58 PM [express] GET /api/auth/user 409 in 434ms :: {"error":"User needs migration","code":"NEED…
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZjZhYTI2My0yYzgxLTQ3MTQtOTRjMS1kZThkZGE1NTgxNmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI0NjU3LCJpYXQiOjE3NDM3MjEwNTcsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkJydW5vIiwidXNlcm5hbWUiOiJtdGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyMTA1N31dLCJzZXNzaW9uX2lkIjoiNjY0OGFhMjQtYjAzMS00MmMyLTgwZDgtNDgxZWZkZTQ4ZjBiIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.RZdQw1JKBNVn_zxWkQINP2NrLVFJlzkWqYnMsiIo4Lk'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 2f6aa263-2c81-4714-94c1-de8dda55816a
+[auth] User not found by ID, trying email lookup: me@nickybruno.com
+[auth] User found by email, need to update ID
+[auth] User has restaurant associations, using migration dialog instead
+11:09:58 PM [express] GET /api/auth/user 409 in 375ms :: {"error":"User needs migration","code":"NEED…
+[auth] Migration requested for email: me@nickybruno.com
+[auth] Found user in database with ID: e6a5abc8-5616-4963-b813-78c3d25ae939
+[auth] Migration failed: Invalid credentials for user mtldev
+11:10:27 PM [express] POST /api/auth/migrate-user 401 in 226ms :: {"error":"Invalid credentials"}
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZjZhYTI2My0yYzgxLTQ3MTQtOTRjMS1kZThkZGE1NTgxNmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI0NjU3LCJpYXQiOjE3NDM3MjEwNTcsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkJydW5vIiwidXNlcm5hbWUiOiJtdGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyMTA1N31dLCJzZXNzaW9uX2lkIjoiNjY0OGFhMjQtYjAzMS00MmMyLTgwZDgtNDgxZWZkZTQ4ZjBiIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.RZdQw1JKBNVn_zxWkQINP2NrLVFJlzkWqYnMsiIo4Lk'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 2f6aa263-2c81-4714-94c1-de8dda55816a
+[auth] User not found by ID, trying email lookup: me@nickybruno.com
+[auth] User found by email, need to update ID
+[auth] User has restaurant associations, using migration dialog instead
+11:10:38 PM [express] GET /api/auth/user 409 in 581ms :: {"error":"User needs migration","code":"NEED…
+[auth] Migration requested for email: me@nickybruno.com
+[auth] Found user in database with ID: e6a5abc8-5616-4963-b813-78c3d25ae939
+[auth] Migration failed: Invalid credentials for user mtldev
+11:10:51 PM [express] POST /api/auth/migrate-user 401 in 191ms :: {"error":"Invalid credentials"}

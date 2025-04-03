@@ -74,9 +74,11 @@ export function UserMigrationDialog({ isOpen, onClose, initialEmail = '' }: User
     setLoading(true);
     setMigrationState('validating');
     setProgress(10);
+    setErrorMessage('');
     
     try {
       // Step 1: Validate credentials
+      console.log(`Starting migration for email: ${email}`);
       setMigrationState('migrating');
       setProgress(30);
       
@@ -101,14 +103,42 @@ export function UserMigrationDialog({ isOpen, onClose, initialEmail = '' }: User
         onClose();
         window.location.href = '/dashboard';
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Migration error:', error);
       setMigrationState('error');
       setProgress(0);
-      setErrorMessage(error instanceof Error ? error.message : "Failed to migrate user account");
+      
+      // Extract the error message from the response if available
+      let errorMsg = "Failed to migrate user account";
+      
+      if (error.response) {
+        try {
+          const errorData = error.response.data;
+          if (errorData && errorData.error) {
+            errorMsg = errorData.error;
+          }
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+      
+      setErrorMessage(errorMsg);
+      
+      // Include debugging hint for invalid credentials
+      if (errorMsg.includes("Invalid credentials")) {
+        setErrorMessage(
+          `${errorMsg} - This could happen if: 
+          1. Your password is incorrect 
+          2. Your account uses a different username or email
+          Please try again or contact support.`
+        );
+      }
       
       toast({
         title: "Migration Failed",
-        description: error instanceof Error ? error.message : "Failed to migrate user account",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
