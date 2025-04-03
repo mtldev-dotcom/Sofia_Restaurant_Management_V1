@@ -132,7 +132,7 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
   };
   
   return (
-    <Card className="fixed right-4 top-24 w-72 z-10 shadow-lg border border-border bg-card">
+    <Card className="fixed right-4 top-24 w-72 z-10 shadow-lg border border-border bg-card max-h-[calc(100vh-120px)] flex flex-col overflow-hidden">
       <CardHeader className="px-4 py-3 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center text-sm font-medium">
           <h3 className="text-foreground">Element Properties</h3>
@@ -141,7 +141,7 @@ const PropertiesPanel = ({ selectedElement, onClose }: PropertiesPanelProps) => 
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="px-4 py-3 space-y-5">
+      <CardContent className="px-4 py-3 space-y-5 overflow-y-auto">
         <div>
           <div className="flex items-center mb-2">
             <Type className="h-4 w-4 mr-2 text-muted-foreground" />
