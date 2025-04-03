@@ -132,16 +132,15 @@ export function setupAuth(app: Express) {
       } = req.body;
       
       // Register user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Use admin client to create user with email confirmation bypassed for development
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: {
-            username,
-            first_name: firstName,
-            last_name: lastName,
-          },
-          emailRedirectTo: `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`
+        email_confirm: true, // Auto-confirm email for development
+        user_metadata: {
+          username,
+          first_name: firstName,
+          last_name: lastName,
         }
       });
       
@@ -197,9 +196,20 @@ export function setupAuth(app: Express) {
         console.log(`No restaurant created. Option: ${restaurantOption}, Name: ${restaurantName || 'None'}`);
       }
       
-      // Set the session in the browser's cookies
-      if (authData.session) {
-        res.cookie('supabase_auth_token', authData.session.access_token, cookieOptions);
+      // For admin-created users, we need to generate a session manually
+      // since createUser doesn't return a session
+      if (authData.user) {
+        // Sign in the user to get a session
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (!signInError && signInData.session) {
+          res.cookie('supabase_auth_token', signInData.session.access_token, cookieOptions);
+        } else {
+          console.error("Failed to create session after registration:", signInError);
+        }
       }
             
       // Remove password from the response
