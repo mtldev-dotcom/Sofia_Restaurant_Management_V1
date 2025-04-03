@@ -37,7 +37,8 @@ const EditorPanel = () => {
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    background
   } = useFloorPlanStore();
   
   // Handle canvas interaction for dragging new elements
@@ -266,13 +267,21 @@ const EditorPanel = () => {
           ref={canvasRef}
           onClick={handleCanvasClick}
           onMouseUp={handleCanvasInteraction}
-          className="canvas-container w-full h-full relative bg-background shadow-md overflow-hidden rounded-md" 
+          className="canvas-container w-full h-full relative shadow-md overflow-hidden rounded-md" 
           style={{
-            backgroundImage: `
-              linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),
-              linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px)
-            `,
-            backgroundSize: `${20 * (zoom / 100)}px ${20 * (zoom / 100)}px`,
+            backgroundColor: background.color,
+            backgroundImage: background.type === 'image' && background.imageUrl 
+              ? `url(${background.imageUrl})`
+              : background.showGrid 
+                ? `
+                  linear-gradient(to right, ${background.gridColor} 1px, transparent 1px),
+                  linear-gradient(to bottom, ${background.gridColor} 1px, transparent 1px)
+                `
+                : 'none',
+            backgroundSize: background.type === 'image' ? 'cover' : `${background.gridSize * (zoom / 100)}px ${background.gridSize * (zoom / 100)}px`,
+            backgroundPosition: 'center',
+            backgroundRepeat: background.type === 'image' ? 'no-repeat' : 'repeat',
+            opacity: background.opacity,
             transform: `scale(${zoom / 100})`,
             transformOrigin: 'top left',
             height: '800px',

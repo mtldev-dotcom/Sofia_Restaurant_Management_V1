@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { CircleIcon, SquareIcon, RectangleHorizontalIcon, ArmchairIcon, CircleDotIcon, BedDoubleIcon, PanelTopIcon, PanelTopCloseIcon, GithubIcon, Flower2Icon } from "lucide-react";
+import BackgroundSettings from "@/components/BackgroundSettings";
 
 const Sidebar = () => {
   const startDrag = useFloorPlanStore((state) => state.startDrag);
@@ -131,7 +132,8 @@ const Sidebar = () => {
           <TabsContent value="settings" className="p-4 m-0 h-full">
             <p className="text-sm text-muted-foreground mb-4">Configure your floor plan settings.</p>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Canvas Settings */}
               <div>
                 <Label className="text-sm font-medium mb-2">Canvas Size</Label>
                 <div className="grid grid-cols-2 gap-3">
@@ -156,22 +158,8 @@ const Sidebar = () => {
                 </div>
               </div>
               
-              <div>
-                <Label htmlFor="grid-size" className="text-sm font-medium mb-2">Grid Size</Label>
-                <Input 
-                  id="grid-size"
-                  type="number"
-                  defaultValue="20"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">Size in pixels between grid lines</p>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <Label htmlFor="show-grid" className="text-sm font-medium cursor-pointer">
-                  Show Grid
-                </Label>
-                <Switch id="show-grid" defaultChecked />
-              </div>
+              {/* Background Settings */}
+              <BackgroundSettings />
             </div>
           </TabsContent>
         </div>

@@ -63,9 +63,12 @@ export class MemStorage implements IStorage {
     const id = this.floorPlanIdCounter++;
     const now = new Date();
     
+    // Ensure the background field is defined (even if it was optional in the insert schema)
     const floorPlan: FloorPlan = {
-      ...insertFloorPlan,
       id,
+      name: insertFloorPlan.name,
+      elements: insertFloorPlan.elements,
+      background: insertFloorPlan.background || null,
       createdAt: now,
       updatedAt: now
     };
@@ -82,8 +85,11 @@ export class MemStorage implements IStorage {
     }
     
     const updatedFloorPlan: FloorPlan = {
-      ...existingFloorPlan,
-      ...insertFloorPlan,
+      id: existingFloorPlan.id,
+      name: insertFloorPlan.name,
+      elements: insertFloorPlan.elements,
+      background: insertFloorPlan.background || existingFloorPlan.background,
+      createdAt: existingFloorPlan.createdAt,
       updatedAt: new Date()
     };
     
