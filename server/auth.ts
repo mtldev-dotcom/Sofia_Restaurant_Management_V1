@@ -1,36 +1,42 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
 import { storage } from "./storage";
 import { pool } from "./db";
 import { User as SchemaUser } from "@shared/schema";
+import { supabase } from "./supabase";
+import { createServerClient } from '@supabase/ssr';
+import { CookieOptions } from "express";
 
 declare global {
   namespace Express {
-    interface User extends SchemaUser {}
+    interface Request {
+      supabase: ReturnType<typeof createServerClient>;
+    }
   }
 }
 
-const scryptAsync = promisify(scrypt);
 const PostgresSessionStore = connectPg(session);
 
-// Password hashing functions
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
+// Define cookie options for Supabase auth
+const cookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
-}
+// Function to extract auth token from request
+const getToken = (req: Request): string | null => {
+  // Try to get from authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  
+  // Try to get from cookies
+  return req.cookies?.supabase_auth_token || null;
+};
 
 export function setupAuth(app: Express) {
   const sessionStore = new PostgresSessionStore({
@@ -50,62 +56,39 @@ export function setupAuth(app: Express) {
     }
   };
 
+  // Set up session middleware
   app.set("trust proxy", 1);
   app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-        
-        const passwordValid = await comparePasswords(password, user.password);
-        if (!passwordValid) {
-          return done(null, false, { message: "Invalid username or password" });
-        }
-        
-        return done(null, user);
-      } catch (error) {
-        return done(error);
+  
+  // Middleware to create Supabase client for each request
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    req.supabase = createServerClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_KEY!,
+      {
+        cookies: {
+          get: (name) => req.cookies?.[name],
+          set: (name, value, options) => {
+            res.cookie(name, value, options);
+          },
+          remove: (name, options) => {
+            res.clearCookie(name, options);
+          },
+        },
       }
-    }),
-  );
-
-  passport.serializeUser((user: Express.User, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: string, done) => {
-    try {
-      const user = await storage.getUserById(id);
-      done(null, user || undefined);
-    } catch (error) {
-      done(error);
-    }
+    );
+    next();
   });
 
   // Authentication routes
   app.post("/api/auth/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).json({ error: "Username already exists" });
-      }
-
-      const existingEmail = await storage.getUserByEmail(req.body.email);
-      if (existingEmail) {
-        return res.status(400).json({ error: "Email already exists" });
-      }
-
-      // Hash the password before storing
-      const hashedPassword = await hashPassword(req.body.password);
-      
-      // Extract restaurant data from request body
       const { 
+        email, 
+        password, 
+        username, 
+        firstName, 
+        lastName, 
         restaurantOption, 
         restaurantName, 
         restaurantAddress, 
@@ -113,13 +96,40 @@ export function setupAuth(app: Express) {
         confirmPassword,
         ...userData 
       } = req.body;
-
-      // Create the user
-      const user = await storage.createUser({
-        ...userData,
-        password: hashedPassword,
+      
+      // Register user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            first_name: firstName,
+            last_name: lastName,
+          }
+        }
       });
-
+      
+      if (authError) {
+        return res.status(400).json({ error: authError.message });
+      }
+      
+      // If no user was created or no user ID is available, return an error
+      if (!authData.user || !authData.user.id) {
+        return res.status(500).json({ error: "Failed to create user" });
+      }
+      
+      // Create the user in our database too
+      const user = await storage.createUser({
+        id: authData.user.id, // Use Supabase user ID
+        username,
+        firstName,
+        lastName,
+        email,
+        password: "SUPABASE_AUTH", // We don't need to store the password anymore
+        ...userData
+      });
+      
       // Handle restaurant creation or joining
       if (restaurantOption === "create" && restaurantName) {
         // Create a new restaurant for the user
@@ -135,55 +145,102 @@ export function setupAuth(app: Express) {
       } 
       else if (restaurantOption === "join" && inviteCode) {
         // Attempt to join a restaurant with the invite code
-        // This functionality will need to be implemented later
         console.log(`User ${user.id} attempting to join a restaurant with invite code: ${inviteCode}`);
-        // For now, we'll just log it and not actually implement the invite code joining
+        // For now, we'll just log it
       }
-
-      // Login the user after registration
-      req.login(user, (err) => {
-        if (err) return next(err);
-        
-        // Remove password from the response
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
-      });
+      
+      // Set the session in the browser's cookies
+      if (authData.session) {
+        res.cookie('supabase_auth_token', authData.session.access_token, cookieOptions);
+      }
+            
+      // Remove password from the response
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
     } catch (error) {
       next(error);
     }
   });
 
-  app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message?: string }) => {
-      if (err) return next(err);
-      if (!user) {
-        return res.status(401).json({ error: info?.message || "Authentication failed" });
+  app.post("/api/auth/login", async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+      
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return res.status(401).json({ error: error.message });
       }
       
-      req.login(user, (err) => {
-        if (err) return next(err);
-        
-        // Remove password from the response
-        const { password, ...userWithoutPassword } = user as SchemaUser;
-        res.json(userWithoutPassword);
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/auth/logout", (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
-    });
-  });
-
-  app.get("/api/auth/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ error: "Not authenticated" });
+      // Get the user from our database
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: "User not found in database" });
+      }
+      
+      // Set the session in the browser's cookies
+      if (data.session) {
+        res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
+      }
+      
+      // Remove password from the response
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      next(error);
     }
-    
-    // Remove password from the response
-    const { password, ...userWithoutPassword } = req.user as SchemaUser;
-    res.json(userWithoutPassword);
+  });
+
+  app.post("/api/auth/logout", async (req, res, next) => {
+    try {
+      // Sign out from Supabase
+      const { error } = await req.supabase.auth.signOut();
+      
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      
+      // Clear the auth cookie
+      res.clearCookie('supabase_auth_token');
+      
+      res.sendStatus(200);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/auth/user", async (req, res) => {
+    try {
+      // Get the token from the request
+      const token = getToken(req);
+      
+      if (!token) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      // Get the user from Supabase
+      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+      
+      if (error || !supabaseUser) {
+        return res.status(401).json({ error: "Invalid or expired token" });
+      }
+      
+      // Get the user from our database
+      const user = await storage.getUserById(supabaseUser.id);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found in database" });
+      }
+      
+      // Remove password from the response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
   });
 }

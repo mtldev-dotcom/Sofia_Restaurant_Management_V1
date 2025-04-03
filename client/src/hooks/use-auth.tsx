@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import {
   useQuery,
   useMutation,
@@ -8,6 +8,7 @@ import { InsertUser, User, loginUserSchema } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
 
 type AuthContextType = {
   user: User | null;
@@ -18,7 +19,11 @@ type AuthContextType = {
   registerMutation: UseMutationResult<User, Error, RegisterData>;
 };
 
-const loginSchema = loginUserSchema;
+// Updated login schema to use email
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 type LoginData = z.infer<typeof loginSchema>;
 
 // Extend the schema for registration to confirm password
@@ -42,6 +47,29 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [supabaseLoaded, setSupabaseLoaded] = useState(false);
+
+  // Check for existing Supabase session on load
+  useEffect(() => {
+    async function getInitialSession() {
+      try {
+        // Check for existing session
+        const { data } = await supabase.auth.getSession();
+        
+        // If we have a session, we'll refetch the user data
+        if (data.session) {
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        }
+        setSupabaseLoaded(true);
+      } catch (error) {
+        console.error("Error checking session:", error);
+        setSupabaseLoaded(true);
+      }
+    }
+
+    getInitialSession();
+  }, []);
+
   const {
     data: user,
     error,
@@ -49,7 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | null, Error>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: supabaseLoaded, // Only run this query after we check for Supabase session
   });
+
+  // Set up Supabase auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        // Session exists, refetch user data
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      } else {
+        // No session, clear user data
+        queryClient.setQueryData(["/api/auth/user"], null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -66,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message || "Invalid username or password",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
     },
@@ -119,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user: user ?? null,
-        isLoading,
+        isLoading: isLoading || !supabaseLoaded,
         error,
         loginMutation,
         logoutMutation,
