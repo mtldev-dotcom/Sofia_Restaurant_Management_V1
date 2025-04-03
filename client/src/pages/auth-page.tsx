@@ -64,12 +64,7 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const { user, loginMutation, registerMutation } = useAuth();
   
-  // Redirect if already logged in
-  if (user) {
-    return <Redirect to="/" />;
-  }
-
-  // Login form
+  // Login form - MUST be created before any conditional returns
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -78,7 +73,7 @@ export default function AuthPage() {
     },
   });
 
-  // Registration form
+  // Registration form - MUST be created before any conditional returns
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -95,6 +90,11 @@ export default function AuthPage() {
       inviteCode: "",
     },
   });
+  
+  // Redirect if already logged in
+  if (user) {
+    return <Redirect to="/" />;
+  }
 
   // Handle login form submission
   const onLoginSubmit = (values: LoginFormValues) => {
