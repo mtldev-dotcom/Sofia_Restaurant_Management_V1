@@ -456,40 +456,109 @@ export function setupAuth(app: Express) {
       if (dbUser.id !== newUserId) {
         console.log(`[auth] Updating user ID in database from ${dbUser.id} to ${newUserId}`);
         try {
-          // First, let's just create a duplicate user record with the new ID
-          // This handles the foreign key constraint more smoothly than trying to update the ID
-          // We'll create a new user with the same details but the Supabase ID
-          const newUserData = {
-            id: newUserId,
-            username: dbUser.username,
-            email: dbUser.email,
-            firstName: dbUser.firstName,
-            lastName: dbUser.lastName,
-            password: dbUser.password, // This is already hashed
-            role: dbUser.role,
-            phoneNumber: dbUser.phoneNumber
-          };
+          // Instead of creating a new user, let's handle the existing user cases by checking both email and ID
+          const existingUserById = await storage.getUserById(newUserId);
+          const existingUserByEmail = await storage.getUserByEmail(dbUser.email);
           
-          // Check if the user with the new ID already exists
-          const existingUser = await storage.getUserById(newUserId);
-          if (!existingUser) {
-            console.log(`[auth] Creating new user record with Supabase ID: ${newUserId}`);
-            try {
-              // Direct database insertion to bypass validation
-              await db
-                .insert(users)
-                .values(newUserData);
-              console.log(`[auth] Successfully created new user record with ID: ${newUserId}`);
-            } catch (createError) {
-              console.error(`[auth] Error creating new user record:`, createError);
-              return res.status(500).json({ error: "Failed to create new user record. Please try again." });
+          // If there's a user with the Supabase ID but different email
+          if (existingUserById && existingUserById.email !== dbUser.email) {
+            console.log(`[auth] User with ID ${newUserId} exists but has different email (${existingUserById.email})`);
+            console.log(`[auth] Deleting conflicting user to avoid duplicate issues`);
+            await storage.deleteUser(existingUserById.id);
+            console.log(`[auth] Deleted conflicting user record`);
+          }
+          
+          // If there's a user with the same email but different ID than the Supabase ID
+          if (existingUserByEmail && existingUserByEmail.id !== newUserId) {
+            console.log(`[auth] User with email ${dbUser.email} exists with ID ${existingUserByEmail.id}`);
+            
+            // If it's the same user we're trying to migrate
+            if (existingUserByEmail.id === dbUser.id) {
+              console.log(`[auth] This is the same user, updating ID directly`);
+              // Execute a direct SQL update to change the user ID
+              try {
+                const updateResult = await pool.query(
+                  `UPDATE users SET id = $1 WHERE id = $2`,
+                  [newUserId, dbUser.id]
+                );
+                console.log(`[auth] Direct SQL update affected ${updateResult.rowCount} rows`);
+              } catch (sqlError) {
+                console.error(`[auth] Error with direct SQL update:`, sqlError);
+              }
+            } else {
+              console.log(`[auth] This is a different user with the same email, deleting to avoid conflicts`);
+              await storage.deleteUser(existingUserByEmail.id);
+              console.log(`[auth] Deleted conflicting user by email`);
+              
+              // Then update the original user's ID
+              try {
+                const updateResult = await pool.query(
+                  `UPDATE users SET id = $1 WHERE id = $2`,
+                  [newUserId, dbUser.id]
+                );
+                console.log(`[auth] Direct SQL update affected ${updateResult.rowCount} rows`);
+              } catch (sqlError) {
+                console.error(`[auth] Error with direct SQL update:`, sqlError);
+              }
             }
           } else {
-            console.log(`[auth] User with Supabase ID already exists: ${newUserId}`);
+            // No conflicting users, just update the ID
+            console.log(`[auth] No conflicting users, updating ID with direct SQL`);
+            try {
+              const updateResult = await pool.query(
+                `UPDATE users SET id = $1 WHERE id = $2`,
+                [newUserId, dbUser.id]
+              );
+              console.log(`[auth] Direct SQL update affected ${updateResult.rowCount} rows`);
+            } catch (sqlError) {
+              console.error(`[auth] Error with direct SQL update:`, sqlError);
+              
+              // If direct SQL fails, try one more approach - delete and recreate
+              console.log(`[auth] Trying alternative: Delete and recreate user`);
+              try {
+                // First get all user data
+                const userData = {
+                  id: newUserId,
+                  username: dbUser.username,
+                  email: dbUser.email,
+                  firstName: dbUser.firstName,
+                  lastName: dbUser.lastName,
+                  password: dbUser.password,
+                  role: dbUser.role,
+                  phoneNumber: dbUser.phoneNumber,
+                  createdAt: dbUser.createdAt,
+                  updatedAt: new Date()
+                };
+                
+                // Delete the old user
+                await pool.query(`DELETE FROM users WHERE id = $1`, [dbUser.id]);
+                
+                // Create a new user with the same data but new ID
+                await pool.query(`
+                  INSERT INTO users (id, username, email, first_name, last_name, password, role, phone_number, created_at, updated_at)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                `, [
+                  userData.id, userData.username, userData.email, 
+                  userData.firstName, userData.lastName, userData.password,
+                  userData.role, userData.phoneNumber, userData.createdAt, userData.updatedAt
+                ]);
+                
+                console.log(`[auth] Successfully recreated user with new ID ${newUserId}`);
+              } catch (finalError) {
+                console.error(`[auth] Final approach failed:`, finalError);
+                return res.status(500).json({ 
+                  error: "Migration failed. Please try again or contact support.",
+                  details: "We encountered an issue updating your user ID."
+                });
+              }
+            }
           }
         } catch (updateError) {
           console.error(`[auth] Error during user ID migration:`, updateError);
-          return res.status(500).json({ error: "Failed to update user ID. Please try again." });
+          return res.status(500).json({ 
+            error: "User migration failed. Please contact support.",
+            details: "We encountered an error while updating your user data." 
+          });
         }
       }
       
@@ -517,22 +586,71 @@ export function setupAuth(app: Express) {
             if (!alreadyAssociated) {
               console.log(`[auth] Creating association between user ${newUserId} and restaurant ${restaurant.id} with role ${role}`);
               
-              // Direct database insertion to bypass validation checks
+              // Try a more direct SQL approach that can handle potential database state issues
               try {
-                const results = await db
-                  .insert(restaurantUsers)
-                  .values({
-                    userId: newUserId,
-                    restaurantId: restaurant.id,
-                    role: role,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                  })
-                  .returning();
+                // First check if this exact association already exists in the database
+                const checkResult = await pool.query(
+                  `SELECT COUNT(*) FROM restaurant_users WHERE user_id = $1 AND restaurant_id = $2`,
+                  [newUserId, restaurant.id]
+                );
                 
-                console.log(`[auth] Successfully created association with ID: ${results[0]?.id}`);
+                const exists = parseInt(checkResult.rows[0]?.count) > 0;
+                
+                if (exists) {
+                  console.log(`[auth] Association already exists in database, updating role if needed`);
+                  await pool.query(
+                    `UPDATE restaurant_users SET role = $1, updated_at = NOW() 
+                     WHERE user_id = $2 AND restaurant_id = $3`,
+                    [role, newUserId, restaurant.id]
+                  );
+                } else {
+                  console.log(`[auth] Creating fresh association with direct SQL`);
+                  const insertResult = await pool.query(
+                    `INSERT INTO restaurant_users (user_id, restaurant_id, role, created_at, updated_at)
+                     VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`,
+                    [newUserId, restaurant.id, role]
+                  );
+                  
+                  if (insertResult.rows && insertResult.rows.length > 0) {
+                    console.log(`[auth] Successfully created association with ID: ${insertResult.rows[0].id}`);
+                  } else {
+                    console.log(`[auth] Association created but could not retrieve ID`);
+                  }
+                }
               } catch (directInsertError) {
-                console.error(`[auth] Error with direct association insertion:`, directInsertError);
+                console.error(`[auth] Error with direct SQL restaurant association:`, directInsertError);
+                
+                // If we get a foreign key constraint error, there might be an issue with the database state
+                // Let's provide more helpful information
+                if (directInsertError.toString().includes('foreign key constraint')) {
+                  console.log(`[auth] Foreign key constraint error detected - checking database state`);
+                  
+                  // Check if the user exists in the database
+                  const userCheck = await pool.query(
+                    `SELECT id FROM users WHERE id = $1`,
+                    [newUserId]
+                  );
+                  
+                  const userExists = userCheck.rows.length > 0;
+                  
+                  // Check if the restaurant exists in the database
+                  const restaurantCheck = await pool.query(
+                    `SELECT id FROM restaurants WHERE id = $1`,
+                    [restaurant.id]
+                  );
+                  
+                  const restaurantExists = restaurantCheck.rows.length > 0;
+                  
+                  console.log(`[auth] Database state check: User exists: ${userExists}, Restaurant exists: ${restaurantExists}`);
+                  
+                  if (!userExists) {
+                    console.error(`[auth] User with ID ${newUserId} does not exist in the database`);
+                  }
+                  
+                  if (!restaurantExists) {
+                    console.error(`[auth] Restaurant with ID ${restaurant.id} does not exist in the database`);
+                  }
+                }
               }
             } else {
               console.log(`[auth] Association already exists between user ${newUserId} and restaurant ${restaurant.id}`);
