@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { FloorPlan } from '@shared/schema';
+import { 
+  FloorPlan, 
+  FloorPlanElement as SchemaFloorPlanElement, 
+  BackgroundSettings as SchemaBackgroundSettings,
+  FloorPlanLayout
+} from '@shared/schema';
 
 export interface FloorPlanElement {
   id: string;
@@ -41,10 +46,13 @@ export interface BackgroundSettings {
 interface FloorPlanState {
   // Current floor plan
   id: string | null;
+  restaurantId: string | null;
   name: string;
   elements: FloorPlanElement[];
   selectedElement: FloorPlanElement | null;
   dragElement: DragElement | null;
+  isDefault: boolean;
+  createdBy: string | null;
   
   // Background settings
   background: BackgroundSettings;
@@ -54,7 +62,10 @@ interface FloorPlanState {
   historyIndex: number;
   
   // Actions
+  setRestaurantId: (restaurantId: string) => void;
+  setCreatedBy: (userId: string) => void;
   setName: (name: string) => void;
+  setIsDefault: (isDefault: boolean) => void;
   selectElement: (element: FloorPlanElement | null) => void;
   addElement: (element: FloorPlanElement) => void;
   updateElement: (element: FloorPlanElement) => void;
@@ -76,14 +87,20 @@ interface FloorPlanState {
   // Background actions
   updateBackground: (settings: Partial<BackgroundSettings>) => void;
   setBackgroundImage: (imageUrl: string | null) => void;
+  
+  // Data access
+  getFloorPlanData: () => FloorPlanLayout;
 }
 
 export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   id: null,
+  restaurantId: null,
   name: '',
   elements: [],
   selectedElement: null,
   dragElement: null,
+  isDefault: false,
+  createdBy: null,
   history: [[]],
   historyIndex: 0,
   canUndo: false,
@@ -100,7 +117,13 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
     gridColor: '#e5e7eb'
   },
   
+  setRestaurantId: (restaurantId: string) => set({ restaurantId }),
+  
+  setCreatedBy: (userId: string) => set({ createdBy: userId }),
+  
   setName: (name: string) => set({ name }),
+  
+  setIsDefault: (isDefault: boolean) => set({ isDefault }),
   
   selectElement: (element: FloorPlanElement | null) => set({ selectedElement: element }),
   
@@ -309,21 +332,24 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   },
   
   loadFloorPlan: (floorPlan: FloorPlan) => {
-    const elements = floorPlan.elements as FloorPlanElement[];
-    const { background } = get();
+    // Extract layout from the floor plan
+    const layout = floorPlan.layout as FloorPlanLayout;
     
-    // If floorPlan has background settings, use them, otherwise keep current settings
-    const newBackground = floorPlan.background 
-      ? floorPlan.background as BackgroundSettings
-      : background;
+    if (!layout) {
+      console.error('Invalid floor plan layout:', floorPlan);
+      return;
+    }
     
     set({
-      id: String(floorPlan.id),
+      id: floorPlan.id,
+      restaurantId: floorPlan.restaurantId,
       name: floorPlan.name,
-      elements,
+      isDefault: floorPlan.isDefault,
+      createdBy: floorPlan.createdBy,
+      elements: layout.elements as FloorPlanElement[],
       selectedElement: null,
-      background: newBackground,
-      history: [elements],
+      background: layout.background as BackgroundSettings,
+      history: [layout.elements as FloorPlanElement[]],
       historyIndex: 0,
       canUndo: false,
       canRedo: false
@@ -334,6 +360,7 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
     const { background } = get();
     set({
       id: null,
+      restaurantId: get().restaurantId, // Preserve restaurant ID
       name: '',
       elements: [],
       selectedElement: null,
@@ -341,7 +368,8 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
       history: [[]],
       historyIndex: 0,
       canUndo: false,
-      canRedo: false
+      canRedo: false,
+      isDefault: false
     });
   },
   
@@ -365,5 +393,14 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
         imageUrl
       }
     });
+  },
+  
+  // Data access methods
+  getFloorPlanData: () => {
+    const { elements, background } = get();
+    return {
+      elements,
+      background
+    };
   }
 }));

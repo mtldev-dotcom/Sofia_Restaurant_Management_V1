@@ -1,0 +1,1 @@
+INSERT INTO "public"."restaurants" ("id", "owner_id", "name", "address", "phone", "email", "created_at", "updated_at") VALUES ('b14edefc-b783-4036-ac3d-e3374cf3e3af', 'c22e67cc-50e9-4394-9aec-c51b0d11a566', 'Le Gourmet', '456 Avenue du Parc, Montreal, QC', '514-987-6543', 'gourmet@restaurant.com', '2025-03-29 19:30:35.737702+00', '2025-03-29 19:30:35.737702+00');

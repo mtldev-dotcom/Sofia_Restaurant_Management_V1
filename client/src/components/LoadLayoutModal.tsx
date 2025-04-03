@@ -6,52 +6,89 @@ import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { FloorPlan } from "@shared/schema";
-import { Folder, Upload, Calendar, LayoutGrid } from "lucide-react";
+import { Folder, Upload, Calendar, LayoutGrid, Check, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoadLayoutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  restaurantId?: string;
 }
 
-const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
+const LoadLayoutModal = ({ isOpen, onClose, restaurantId }: LoadLayoutModalProps) => {
   const [selectedFloorPlanId, setSelectedFloorPlanId] = useState<string | null>(null);
   const { toast } = useToast();
   const { loadFloorPlan } = useFloorPlanStore();
   
-  // Fetch available floor plans
-  const { data: floorPlans, isLoading, error, refetch } = useQuery<FloorPlan[]>({
-    queryKey: ['/api/floorplans'],
-    enabled: isOpen,
-  });
-  
+  // Reset selection when modal opens
   useEffect(() => {
     if (isOpen) {
+      setSelectedFloorPlanId(null);
+    }
+  }, [isOpen]);
+  
+  // Fetch available floor plans for the given restaurant
+  const { data: floorPlans, isLoading, error, refetch } = useQuery<FloorPlan[]>({
+    queryKey: ['/api/restaurants', restaurantId, 'floorplans'],
+    queryFn: async () => {
+      if (!restaurantId) return [];
+      
+      const response = await fetch(`/api/restaurants/${restaurantId}/floorplans`);
+      if (!response.ok) {
+        throw new Error('Failed to load floor plans');
+      }
+      
+      return response.json();
+    },
+    enabled: isOpen && !!restaurantId,
+  });
+  
+  // Refetch when the modal opens or restaurantId changes
+  useEffect(() => {
+    if (isOpen && restaurantId) {
       refetch();
     }
-  }, [isOpen, refetch]);
+  }, [isOpen, restaurantId, refetch]);
   
-  const handleLoadFloorPlan = () => {
-    if (!selectedFloorPlanId || !floorPlans) return;
+  const handleLoadFloorPlan = async () => {
+    if (!selectedFloorPlanId) return;
     
-    const floorPlan = floorPlans.find(fp => String(fp.id) === selectedFloorPlanId);
-    
-    if (!floorPlan) {
+    try {
+      // Fetch the selected floor plan with all its details
+      const response = await fetch(`/api/floorplans/${selectedFloorPlanId}`);
+      if (!response.ok) {
+        throw new Error('Failed to load floor plan details');
+      }
+      
+      const floorPlan = await response.json();
+      
+      // Load the floor plan into the store
+      loadFloorPlan(floorPlan);
+      
+      toast({
+        title: "Success",
+        description: `Loaded floor plan: ${floorPlan.name}`,
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error("Error loading floor plan:", error);
       toast({
         title: "Error",
-        description: "Selected floor plan not found",
+        description: "Failed to load floor plan",
         variant: "destructive"
       });
-      return;
     }
-    
-    loadFloorPlan(floorPlan);
-    toast({
-      title: "Success",
-      description: `Loaded floor plan: ${floorPlan.name}`,
-    });
-    
-    onClose();
+  };
+  
+  // Calculate elements count for a floor plan
+  const getElementsCount = (floorPlan: FloorPlan): number => {
+    try {
+      const layout = floorPlan.layout as any;
+      return (layout?.elements?.length || 0);
+    } catch (e) {
+      return 0;
+    }
   };
   
   return (
@@ -91,15 +128,23 @@ const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
                     key={floorPlan.id}
                     className={cn(
                       "p-3 border rounded-md cursor-pointer transition-colors",
-                      selectedFloorPlanId === String(floorPlan.id)
+                      selectedFloorPlanId === floorPlan.id
                         ? "border-primary bg-primary/5"
                         : "border-border hover:bg-accent/5"
                     )}
-                    onClick={() => setSelectedFloorPlanId(String(floorPlan.id))}
+                    onClick={() => setSelectedFloorPlanId(floorPlan.id)}
                   >
-                    <div className="font-medium text-foreground flex items-center">
-                      <LayoutGrid className="h-4 w-4 mr-2 text-primary" />
-                      {floorPlan.name}
+                    <div className="font-medium text-foreground flex items-center justify-between">
+                      <span className="flex items-center">
+                        <LayoutGrid className="h-4 w-4 mr-2 text-primary" />
+                        {floorPlan.name}
+                      </span>
+                      {floorPlan.isDefault && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary flex items-center">
+                          <Home className="h-3 w-3 mr-1" />
+                          Default
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 flex items-center">
                       <span className="flex items-center">
@@ -107,7 +152,7 @@ const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
                         {new Date(floorPlan.createdAt).toLocaleDateString()}
                       </span>
                       <span className="mx-2">•</span>
-                      <span>{(floorPlan.elements as any[])?.length || 0} elements</span>
+                      <span>{getElementsCount(floorPlan)} elements</span>
                     </div>
                   </div>
                 ))}

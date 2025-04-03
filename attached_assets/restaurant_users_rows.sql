@@ -1,0 +1,1 @@
+INSERT INTO "public"."restaurant_users" ("id", "restaurant_id", "user_id", "role", "created_at", "updated_at", "extra_properties") VALUES ('9f68e9c2-baa8-4a44-b365-120920c6ed9b', 'b14edefc-b783-4036-ac3d-e3374cf3e3af', 'c22e67cc-50e9-4394-9aec-c51b0d11a566', 'Owner', '2025-03-29 19:35:00.984534+00', '2025-03-29 19:35:00.984534+00', null);
