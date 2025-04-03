@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'wouter';
 import Header from './Header';
-import { Menu, X, LayoutDashboard, Home, Calendar, Users, Settings, HelpCircle } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Home, Calendar, Users, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/use-auth";
 
 // Create a local version of the SlideoverMenu component
 interface SlideoverMenuProps {
@@ -14,6 +15,7 @@ interface SlideoverMenuProps {
 const SlideoverMenu: React.FC<SlideoverMenuProps> = ({ isOpen, onClose }) => {
   const [currentLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { logoutMutation } = useAuth();
   
   const navigation = [
     {
@@ -111,6 +113,15 @@ const SlideoverMenu: React.FC<SlideoverMenuProps> = ({ isOpen, onClose }) => {
 
           {/* Footer */}
           <div className="p-4 border-t">
+            <Button 
+              variant="outline" 
+              className="w-full mb-4 text-destructive border-destructive hover:bg-destructive/10 flex items-center justify-center"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              {logoutMutation.isPending ? "Logging out..." : "Logout"}
+            </Button>
             <div className="text-xs text-muted-foreground">
               <p>© {new Date().getFullYear()} TablePlan App</p>
               <p>Version 1.0</p>
