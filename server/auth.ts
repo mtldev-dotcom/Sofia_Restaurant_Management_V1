@@ -2,8 +2,8 @@ import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { pool } from "./db";
-import { User as SchemaUser } from "@shared/schema";
+import { db, pool } from "./db";
+import { User as SchemaUser, users, restaurantUsers } from "@shared/schema";
 import { supabase } from "./supabase";
 import { createServerClient } from '@supabase/ssr';
 import { CookieOptions } from "express";
@@ -456,12 +456,51 @@ export function setupAuth(app: Express) {
       if (dbUser.id !== newUserId) {
         console.log(`[auth] Updating user ID in database from ${dbUser.id} to ${newUserId}`);
         try {
-          await storage.updateUser(dbUser.id, { id: newUserId });
+          // First, let's just create a duplicate user record with the new ID
+          // This handles the foreign key constraint more smoothly than trying to update the ID
+          // We'll create a new user with the same details but the Supabase ID
+          const newUserData = {
+            id: newUserId,
+            username: dbUser.username,
+            email: dbUser.email,
+            firstName: dbUser.firstName,
+            lastName: dbUser.lastName,
+            password: dbUser.password, // This is already hashed
+            role: dbUser.role,
+            phoneNumber: dbUser.phoneNumber
+          };
+          
+          // Check if the user with the new ID already exists
+          const existingUser = await storage.getUserById(newUserId);
+          if (!existingUser) {
+            console.log(`[auth] Creating new user record with Supabase ID: ${newUserId}`);
+            try {
+              // Direct database insertion to bypass validation
+              await db
+                .insert(users)
+                .values(newUserData);
+              console.log(`[auth] Successfully created new user record with ID: ${newUserId}`);
+            } catch (createError) {
+              console.error(`[auth] Error creating new user record:`, createError);
+              return res.status(500).json({ error: "Failed to create new user record. Please try again." });
+            }
+          } else {
+            console.log(`[auth] User with Supabase ID already exists: ${newUserId}`);
+          }
         } catch (updateError) {
-          console.error(`[auth] Error updating user ID:`, updateError);
+          console.error(`[auth] Error during user ID migration:`, updateError);
           return res.status(500).json({ error: "Failed to update user ID. Please try again." });
         }
       }
+      
+      // Now we need to verify the user with the new ID exists before proceeding
+      const verifyUser = await storage.getUserById(newUserId);
+      if (!verifyUser) {
+        console.error(`[auth] Critical error: User with ID ${newUserId} still doesn't exist after migration`);
+        return res.status(500).json({ error: "User migration failed. Please try again or contact support." });
+      }
+      
+      console.log(`[auth] Verified that user with ID ${newUserId} exists in the database`);
       
       // Now handle restaurant associations AFTER the user ID has been updated
       if (restaurantAssociations.length > 0) {
@@ -477,7 +516,24 @@ export function setupAuth(app: Express) {
             
             if (!alreadyAssociated) {
               console.log(`[auth] Creating association between user ${newUserId} and restaurant ${restaurant.id} with role ${role}`);
-              await storage.linkUserToRestaurant(newUserId, restaurant.id, role);
+              
+              // Direct database insertion to bypass validation checks
+              try {
+                const results = await db
+                  .insert(restaurantUsers)
+                  .values({
+                    userId: newUserId,
+                    restaurantId: restaurant.id,
+                    role: role,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                  })
+                  .returning();
+                
+                console.log(`[auth] Successfully created association with ID: ${results[0]?.id}`);
+              } catch (directInsertError) {
+                console.error(`[auth] Error with direct association insertion:`, directInsertError);
+              }
             } else {
               console.log(`[auth] Association already exists between user ${newUserId} and restaurant ${restaurant.id}`);
             }
@@ -485,6 +541,19 @@ export function setupAuth(app: Express) {
             console.error(`[auth] Error creating restaurant association:`, associationError);
             // Continue with other associations even if one fails
           }
+        }
+      }
+      
+      // Now that we have successfully migrated the user and associations,
+      // we can safely delete the old user record with the previous ID
+      if (dbUser.id !== newUserId) {
+        console.log(`[auth] Deleting old user record with ID: ${dbUser.id}`);
+        try {
+          await storage.deleteUser(dbUser.id);
+          console.log(`[auth] Successfully deleted old user record`);
+        } catch (deleteError) {
+          console.warn(`[auth] Warning: Could not delete old user record:`, deleteError);
+          // Non-critical error, continue with migration
         }
       }
       
