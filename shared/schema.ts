@@ -145,8 +145,8 @@ export const seatingAreas = pgTable("seating_areas", {
   name: text("name"),
   capacityRange: jsonb("capacity_range"),
   description: text("description"),
-  x: text("x"),
-  y: text("y"),
+  x: text("x"),  // Keeping as text to match database
+  y: text("y"),  // Keeping as text to match database
   properties: jsonb("properties"), 
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
@@ -174,8 +174,8 @@ export const insertSeatingAreaSchema = z.object({
   name: z.string().min(1, "Seating area name is required"),
   capacityRange: capacityRangeSchema,
   description: z.string().optional(),
-  x: z.number(),
-  y: z.number(),
+  x: z.coerce.string(),  // Using string for x to match database
+  y: z.coerce.string(),  // Using string for y to match database
   properties: seatingAreaPropertiesSchema
 });
 
@@ -246,7 +246,11 @@ export type Customer = typeof customers.$inferSelect;
 export type ScheduleService = typeof scheduleServices.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type BookingHistory = typeof bookingHistory.$inferSelect;
-export type SeatingArea = typeof seatingAreas.$inferSelect;
+// Redefine SeatingArea type to match how it's used in the code - handling null values
+export type SeatingArea = Omit<typeof seatingAreas.$inferSelect, 'x' | 'y'> & {
+  x: string | null;
+  y: string | null;
+};
 export type InsertSeatingArea = z.infer<typeof insertSeatingAreaSchema>;
 export type UpdateSeatingArea = z.infer<typeof updateSeatingAreaSchema>;
 export type CapacityRange = z.infer<typeof capacityRangeSchema>;

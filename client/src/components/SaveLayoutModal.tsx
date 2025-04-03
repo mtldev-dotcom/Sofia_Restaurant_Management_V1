@@ -227,12 +227,13 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
       // Handle removal of tables that no longer exist
       const currentTableIds = new Set(tableElements.map(table => table.id));
       
-      for (const [elementId, area] of existingSeatingAreasMap.entries()) {
+      // Convert map entries to array and iterate
+      Array.from(existingSeatingAreasMap.entries()).forEach(async ([elementId, area]) => {
         if (!currentTableIds.has(elementId)) {
           // This seating area's corresponding table no longer exists, delete it
           await apiRequest('DELETE', `/api/seatingareas/${area.id}`, null);
         }
-      }
+      });
       
     } catch (error) {
       console.error('Error saving tables as seating areas:', error);

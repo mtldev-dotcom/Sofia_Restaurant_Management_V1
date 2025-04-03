@@ -398,8 +398,8 @@ export class DatabaseStorage implements IStorage {
         name: row.name,
         capacityRange: row.capacity_range,
         description: row.description,
-        x: Number(row.x),
-        y: Number(row.y),
+        x: row.x,
+        y: row.y,
         properties: row.properties,
         createdAt: row.created_at
       };
@@ -464,8 +464,8 @@ export class DatabaseStorage implements IStorage {
         name: row.name,
         capacityRange: row.capacity_range,
         description: row.description,
-        x: Number(row.x),
-        y: Number(row.y),
+        x: row.x,
+        y: row.y,
         properties: row.properties,
         createdAt: row.created_at
       };
