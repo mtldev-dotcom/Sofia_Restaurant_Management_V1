@@ -24,7 +24,7 @@ import {
   seatingAreas
 } from "@shared/schema";
 import { db, pool } from './db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import session from 'express-session';
 import connectPg from 'connect-pg-simple';
 
