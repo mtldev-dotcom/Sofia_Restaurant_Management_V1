@@ -79,25 +79,29 @@ export function UserMigrationDialog({ isOpen, onClose, initialEmail = '' }: User
     try {
       // Step 1: Validate credentials
       console.log(`Starting migration for email: ${email}`);
+      
+      // Update UI to show migrating state
       setMigrationState('migrating');
       setProgress(30);
       
       // Step 2: Perform the migration
       const response = await apiRequest('POST', '/api/auth/migrate-user', { email, password });
       
+      // Update progress and state
       setProgress(100);
       setMigrationState('success');
       
+      // Show success toast
       toast({
-        title: "User Migrated",
-        description: "Your account has been successfully migrated to the new authentication system",
+        title: "Account Migration Successful",
+        description: "Your account has been migrated to the new authentication system. You'll be redirected to the dashboard.",
         variant: "default",
       });
       
-      // Refresh user data
+      // Refresh user data from server
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Allow the success message to be seen for a moment
+      // Allow the success message to be seen for a moment before redirecting
       setTimeout(() => {
         resetState();
         onClose();
@@ -124,21 +128,47 @@ export function UserMigrationDialog({ isOpen, onClose, initialEmail = '' }: User
         errorMsg = error.message;
       }
       
-      setErrorMessage(errorMsg);
-      
-      // Include debugging hint for invalid credentials
+      // Include helpful troubleshooting tips based on error type
       if (errorMsg.includes("Invalid credentials")) {
         setErrorMessage(
-          `${errorMsg} - This could happen if: 
-          1. Your password is incorrect 
-          2. Your account uses a different username or email
-          Please try again or contact support.`
+          `${errorMsg}
+
+This could happen if:
+1. Your password is incorrect
+2. Your account uses a different email address
+3. You registered with a social provider (Google, GitHub, etc.)
+
+Troubleshooting:
+- Try the password you usually use for this account
+- Try logging in with your email instead of username
+- If you continue having issues, contact support`
+        );
+      } else if (errorMsg.includes("User not found")) {
+        setErrorMessage(
+          `${errorMsg}
+
+This could happen if:
+1. You're using a different email address than the one registered
+2. Your account may have been removed from the system
+3. There might be a typo in your email address
+
+Troubleshooting:
+- Double-check your email address for typos
+- Try other email addresses you might have used
+- If you continue having issues, contact support`
+        );
+      } else {
+        // Generic server error
+        setErrorMessage(
+          `${errorMsg}
+
+This appears to be a server or system error. Please try again later or contact support if the issue persists.`
         );
       }
       
       toast({
         title: "Migration Failed",
-        description: errorMsg,
+        description: "Please check the error details for more information",
         variant: "destructive",
       });
     } finally {
@@ -157,14 +187,18 @@ export function UserMigrationDialog({ isOpen, onClose, initialEmail = '' }: User
         <DialogHeader>
           <DialogTitle>Migrate Your Account</DialogTitle>
           <DialogDescription>
-            We've updated our authentication system. Please provide your credentials to migrate your account.
+            We've upgraded our authentication system for improved security. Please enter your email and password to migrate your account. Your restaurant data and settings will be preserved.
           </DialogDescription>
         </DialogHeader>
         
         {migrationState === 'error' && (
           <Alert variant="destructive" className="my-2">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>
+              <div className="whitespace-pre-line">
+                {errorMessage}
+              </div>
+            </AlertDescription>
           </Alert>
         )}
         

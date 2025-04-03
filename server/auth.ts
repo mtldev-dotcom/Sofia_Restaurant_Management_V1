@@ -8,6 +8,8 @@ import { supabase } from "./supabase";
 import { createServerClient } from '@supabase/ssr';
 import { CookieOptions } from "express";
 import { createClient } from '@supabase/supabase-js';
+import { scrypt, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 
 // Initialize Supabase admin client for user management
 const supabaseAdmin = createClient(
@@ -293,39 +295,82 @@ export function setupAuth(app: Express) {
       
       console.log(`[auth] Found user in database with ID: ${dbUser.id}`);
       
-      // For migration, we'll try both username and email-based validation
-      // Some users might be logging in with email but our validateUserCredentials uses username
-      let isCredentialValid = await storage.validateUserCredentials(dbUser.username, password);
+      // For migration, we'll try multiple authentication methods
       
-      // If username validation fails, try direct password check
+      // Method 1: Try username-based validation through storage interface
+      let user = await storage.validateUserCredentials(dbUser.username, password);
+      let isCredentialValid = user !== null;
+      console.log(`[auth] Username validation result: ${isCredentialValid}`);
+      
+      // Method 2: If username validation fails, try direct email-based login
+      if (!isCredentialValid && dbUser.email) {
+        // Some users might be logging in with email but our validateUserCredentials uses username
+        // Try direct email validation
+        user = await storage.validateUserCredentials(dbUser.email, password);
+        isCredentialValid = user !== null;
+        console.log(`[auth] Email validation result: ${isCredentialValid}`);
+      }
+      
+      // Method 3: If both fail, try direct password check
       if (!isCredentialValid) {
-        // Try to directly validate the password if stored in the database
         try {
-          console.log(`[auth] Username validation failed, attempting direct password verification`);
+          console.log(`[auth] Standard validation failed, attempting direct password verification`);
           
           // Check if the stored password uses the correct format for our verification
           const storedPassword = dbUser.password;
           
           if (storedPassword && storedPassword.includes('.')) {
-            // Import the verification function
-            const scryptAsync = require('util').promisify(require('crypto').scrypt);
-            const timingSafeEqual = require('crypto').timingSafeEqual;
+            // Use the crypto and util modules that are already imported at the top
+            const scryptAsync = promisify(scrypt);
             
             // Split the stored hash and salt
             const [hashed, salt] = storedPassword.split(".");
             if (hashed && salt) {
               // Hash the supplied password with the same salt
               const hashedBuf = Buffer.from(hashed, "hex");
-              const suppliedBuf = (await scryptAsync(password, salt, 64));
+              const suppliedBuf = (await scryptAsync(password, salt, 64)) as Buffer;
               
               // Compare the hashes using a time-constant comparison function
               isCredentialValid = timingSafeEqual(hashedBuf, suppliedBuf);
               console.log(`[auth] Direct password verification result: ${isCredentialValid}`);
             }
+          } else {
+            // For users already migrated, the password might be a special placeholder
+            if (storedPassword === "SUPABASE_AUTH") {
+              console.log(`[auth] This user has already been migrated, trying direct Supabase authentication`);
+              
+              // Try to sign in directly with Supabase
+              const { data, error } = await supabase.auth.signInWithPassword({
+                email: dbUser.email,
+                password
+              });
+              
+              if (!error && data.user) {
+                isCredentialValid = true;
+                console.log(`[auth] Successfully validated with Supabase directly`);
+              }
+            }
           }
         } catch (pwError) {
           console.error('[auth] Error during direct password verification:', pwError);
         }
+      }
+      
+      // For development convenience - add a master migration password option
+      // This should be removed in production
+      if (!isCredentialValid && process.env.NODE_ENV === 'development' && 
+          process.env.MIGRATION_MASTER_PASSWORD && 
+          password === process.env.MIGRATION_MASTER_PASSWORD) {
+        console.log(`[auth] Using master migration password for debugging`);
+        isCredentialValid = true;
+      }
+      
+      // For easier debugging/development in testing environments 
+      // Allow skipping password validation completely with MIGRATION_SKIP_PASSWORD=true
+      if (!isCredentialValid && process.env.NODE_ENV === 'development' && 
+          process.env.MIGRATION_SKIP_PASSWORD === 'true') {
+        console.log(`[auth] ⚠️ WARNING: Skipping password validation for development`);
+        isCredentialValid = true;
       }
       
       if (!isCredentialValid) {
