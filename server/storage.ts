@@ -18,7 +18,7 @@ import {
   floorPlans,
   seatingAreas
 } from "@shared/schema";
-import { db } from './db';
+import { db, pool } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 
 // Storage interface
@@ -346,7 +346,7 @@ export class DatabaseStorage implements IStorage {
         SELECT * FROM seating_areas WHERE id = $1
       `;
       
-      const result = await db.execute(query, [id]);
+      const result = await pool.query(query, [id]);
       
       if (result.rows.length === 0) {
         return null;
@@ -373,6 +373,8 @@ export class DatabaseStorage implements IStorage {
 
   async createSeatingArea(seatingArea: InsertSeatingArea): Promise<SeatingArea> {
     try {
+      console.log("Creating seating area with data:", JSON.stringify(seatingArea, null, 2));
+      
       // Check if floor plan exists
       const floorPlanCheck = await this.getFloorPlan(seatingArea.floorPlanId);
       if (!floorPlanCheck) {
@@ -380,19 +382,23 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get the next available ID (we're using a manually managed bigint primary key)
-      const maxIdResult = await db.execute(
+      const maxIdResult = await pool.query(
         `SELECT MAX(id) as "maxId" FROM seating_areas`
       );
       const nextId = maxIdResult.rows[0]?.maxId ? Number(maxIdResult.rows[0].maxId) + 1 : 1;
       
-      // Use SQL insert with proper parameter binding
+      console.log("Using nextId:", nextId);
+      
+      // Use raw query via pool directly
       const insertQuery = `
         INSERT INTO seating_areas (id, id_floor_plan, name, capacity_range, description, x, y, properties) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
         RETURNING *
       `;
       
-      const results = await db.execute(insertQuery, [
+      console.log("Running SQL query with Pool directly");
+      
+      const params = [
         nextId, 
         seatingArea.floorPlanId, 
         seatingArea.name, 
@@ -401,7 +407,10 @@ export class DatabaseStorage implements IStorage {
         seatingArea.x, 
         seatingArea.y, 
         JSON.stringify(seatingArea.properties)
-      ]);
+      ];
+      
+      // Use the pool directly instead of drizzle's db
+      const results = await pool.query(insertQuery, params);
       
       if (results.rows.length === 0) {
         throw new Error('Failed to create seating area');
@@ -409,6 +418,8 @@ export class DatabaseStorage implements IStorage {
       
       // Convert the raw database row to SeatingArea type
       const row = results.rows[0];
+      console.log("Seating area created successfully:", JSON.stringify(row, null, 2));
+      
       return {
         id: Number(row.id),
         floorPlanId: row.id_floor_plan,
