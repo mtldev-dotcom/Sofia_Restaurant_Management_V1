@@ -385,7 +385,7 @@ export class DatabaseStorage implements IStorage {
       );
       const nextId = maxIdResult.rows[0]?.maxId ? Number(maxIdResult.rows[0].maxId) + 1 : 1;
       
-      // Create the new seating area with SQL query
+      // Use SQL insert with proper parameter binding
       const insertQuery = `
         INSERT INTO seating_areas (id, id_floor_plan, name, capacity_range, description, x, y, properties) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
@@ -397,7 +397,7 @@ export class DatabaseStorage implements IStorage {
         seatingArea.floorPlanId, 
         seatingArea.name, 
         JSON.stringify(seatingArea.capacityRange), 
-        seatingArea.description, 
+        seatingArea.description || null, 
         seatingArea.x, 
         seatingArea.y, 
         JSON.stringify(seatingArea.properties)
