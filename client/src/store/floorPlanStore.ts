@@ -24,6 +24,20 @@ interface DragElement {
   isRound?: boolean;
 }
 
+// Define the types of backgrounds available
+export type BackgroundType = 'color' | 'image' | 'grid';
+
+// Define the background settings interface
+export interface BackgroundSettings {
+  type: BackgroundType;
+  color: string;
+  imageUrl: string | null;
+  opacity: number;
+  showGrid: boolean;
+  gridSize: number;
+  gridColor: string;
+}
+
 interface FloorPlanState {
   // Current floor plan
   id: string | null;
@@ -31,6 +45,9 @@ interface FloorPlanState {
   elements: FloorPlanElement[];
   selectedElement: FloorPlanElement | null;
   dragElement: DragElement | null;
+  
+  // Background settings
+  background: BackgroundSettings;
   
   // History for undo/redo
   history: Array<FloorPlanElement[]>;
@@ -55,6 +72,10 @@ interface FloorPlanState {
   canRedo: boolean;
   loadFloorPlan: (floorPlan: FloorPlan) => void;
   resetFloorPlan: () => void;
+  
+  // Background actions
+  updateBackground: (settings: Partial<BackgroundSettings>) => void;
+  setBackgroundImage: (imageUrl: string | null) => void;
 }
 
 export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
@@ -67,6 +88,17 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   historyIndex: 0,
   canUndo: false,
   canRedo: false,
+  
+  // Default background settings
+  background: {
+    type: 'color',
+    color: '#ffffff',
+    imageUrl: null,
+    opacity: 1,
+    showGrid: true,
+    gridSize: 20,
+    gridColor: '#e5e7eb'
+  },
   
   setName: (name: string) => set({ name }),
   
@@ -278,11 +310,19 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   
   loadFloorPlan: (floorPlan: FloorPlan) => {
     const elements = floorPlan.elements as FloorPlanElement[];
+    const { background } = get();
+    
+    // If floorPlan has background settings, use them, otherwise keep current settings
+    const newBackground = floorPlan.background 
+      ? floorPlan.background as BackgroundSettings
+      : background;
+    
     set({
-      id: floorPlan.id,
+      id: String(floorPlan.id),
       name: floorPlan.name,
       elements,
       selectedElement: null,
+      background: newBackground,
       history: [elements],
       historyIndex: 0,
       canUndo: false,
@@ -291,15 +331,39 @@ export const useFloorPlanStore = create<FloorPlanState>((set, get) => ({
   },
   
   resetFloorPlan: () => {
+    const { background } = get();
     set({
       id: null,
       name: '',
       elements: [],
       selectedElement: null,
+      background, // Preserve background settings
       history: [[]],
       historyIndex: 0,
       canUndo: false,
       canRedo: false
+    });
+  },
+  
+  // Background management functions
+  updateBackground: (settings: Partial<BackgroundSettings>) => {
+    const { background } = get();
+    set({
+      background: {
+        ...background,
+        ...settings
+      }
+    });
+  },
+  
+  setBackgroundImage: (imageUrl: string | null) => {
+    const { background } = get();
+    set({
+      background: {
+        ...background,
+        type: imageUrl ? 'image' : 'color',
+        imageUrl
+      }
     });
   }
 }));

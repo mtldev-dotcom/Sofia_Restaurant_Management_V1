@@ -23,15 +23,29 @@ export const floorPlans = pgTable("floor_plans", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   elements: jsonb("elements").notNull(),
+  background: jsonb("background"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Define background settings schema
+export const backgroundSettingsSchema = z.object({
+  type: z.enum(['color', 'image', 'grid']),
+  color: z.string(),
+  imageUrl: z.string().nullable(),
+  opacity: z.number(),
+  showGrid: z.boolean(),
+  gridSize: z.number(),
+  gridColor: z.string(),
 });
 
 export const insertFloorPlanSchema = createInsertSchema(floorPlans).pick({
   name: true,
   elements: true,
+  background: true,
 }).extend({
   elements: z.array(elementSchema),
+  background: backgroundSettingsSchema.optional(),
 });
 
 export type InsertFloorPlan = z.infer<typeof insertFloorPlanSchema>;

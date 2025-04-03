@@ -33,10 +33,11 @@ const SaveLayoutModal = ({ isOpen, onClose }: SaveLayoutModalProps) => {
     setIsSubmitting(true);
     
     try {
-      // Save current state with the name
+      // Save current state with the name and background settings
       const floorPlanData = {
         name: layoutName,
-        elements: floorPlanState.elements
+        elements: floorPlanState.elements,
+        background: floorPlanState.background
       };
       
       await apiRequest('POST', '/api/floorplans', floorPlanData);

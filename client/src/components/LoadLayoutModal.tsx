@@ -34,7 +34,7 @@ const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
   const handleLoadFloorPlan = () => {
     if (!selectedFloorPlanId || !floorPlans) return;
     
-    const floorPlan = floorPlans.find(fp => fp.id === selectedFloorPlanId);
+    const floorPlan = floorPlans.find(fp => String(fp.id) === selectedFloorPlanId);
     
     if (!floorPlan) {
       toast({
@@ -91,11 +91,11 @@ const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
                     key={floorPlan.id}
                     className={cn(
                       "p-3 border rounded-md cursor-pointer transition-colors",
-                      selectedFloorPlanId === floorPlan.id
+                      selectedFloorPlanId === String(floorPlan.id)
                         ? "border-primary bg-primary/5"
                         : "border-border hover:bg-accent/5"
                     )}
-                    onClick={() => setSelectedFloorPlanId(floorPlan.id)}
+                    onClick={() => setSelectedFloorPlanId(String(floorPlan.id))}
                   >
                     <div className="font-medium text-foreground flex items-center">
                       <LayoutGrid className="h-4 w-4 mr-2 text-primary" />
@@ -107,7 +107,7 @@ const LoadLayoutModal = ({ isOpen, onClose }: LoadLayoutModalProps) => {
                         {new Date(floorPlan.createdAt).toLocaleDateString()}
                       </span>
                       <span className="mx-2">•</span>
-                      <span>{floorPlan.elements.length} elements</span>
+                      <span>{(floorPlan.elements as any[])?.length || 0} elements</span>
                     </div>
                   </div>
                 ))}
