@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Save, Upload, Layout, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Save, Upload, Layout, Trash2, AlertCircle, Loader2, FilePlus } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,14 +19,17 @@ interface HeaderProps {
   onSave: () => void;
   onLoad: () => void;
   onDelete?: () => void;
+  onNew?: () => void;
 }
 
-const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
+const Header = ({ onSave, onLoad, onDelete, onNew }: HeaderProps) => {
   const floorPlanName = useFloorPlanStore((state) => state.name);
   const floorPlanId = useFloorPlanStore((state) => state.id);
   const isDefault = useFloorPlanStore((state) => state.isDefault);
   const resetFloorPlan = useFloorPlanStore((state) => state.resetFloorPlan);
+  const elements = useFloorPlanStore((state) => state.elements);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   
@@ -51,6 +54,23 @@ const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
     }
     
     setDeleteDialogOpen(true);
+  };
+
+  // Handle new floor plan
+  const handleNewClick = () => {
+    // Check if there are unsaved changes (elements exist)
+    if (elements.length > 0 || floorPlanId) {
+      setNewDialogOpen(true);
+    } else {
+      // If no elements or floor plan, just reset directly
+      resetFloorPlan();
+      if (onNew) onNew();
+      
+      toast({
+        title: "New Floor Plan",
+        description: "Started a new empty floor plan",
+      });
+    }
   };
   
   // Handle confirming floor plan deletion
@@ -93,6 +113,19 @@ const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
     }
   };
   
+  // Handle confirming new floor plan
+  const confirmNew = () => {
+    resetFloorPlan();
+    if (onNew) onNew();
+    
+    toast({
+      title: "New Floor Plan",
+      description: "Started a new empty floor plan",
+    });
+    
+    setNewDialogOpen(false);
+  };
+
   return (
     <header className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
       {/* Confirmation Dialog for Floor Plan Deletion */}
@@ -128,6 +161,30 @@ const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
         </AlertDialogContent>
       </AlertDialog>
       
+      {/* Confirmation Dialog for New Floor Plan */}
+      <AlertDialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              Create New Floor Plan
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Any unsaved changes to the current floor plan will be lost. 
+              Are you sure you want to create a new floor plan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmNew}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center">
@@ -144,6 +201,15 @@ const Header = ({ onSave, onLoad, onDelete }: HeaderProps) => {
             </h1>
           </div>
           <div className="flex items-center space-x-3">
+            <Button 
+              onClick={handleNewClick}
+              className="inline-flex items-center"
+              size="sm"
+              variant="outline"
+            >
+              <FilePlus className="mr-1.5 h-4 w-4" />
+              New
+            </Button>
             <Button 
               onClick={onSave} 
               className="inline-flex items-center"

@@ -8,11 +8,13 @@ import LoadLayoutModal from "@/components/LoadLayoutModal";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);
+  const { toast } = useToast();
   
   // Hard-coded for demo purposes - in a real app, these would come from auth and user selection
   const DEMO_USER_ID = 'd4f5bd34-ae5d-4caf-b835-b7ae2fa5f59d';
@@ -49,6 +51,13 @@ const Home = () => {
           // Refresh the floor plans list in the load modal
           const queryKey = ['/api/restaurants', DEMO_RESTAURANT_ID, 'floorplans'];
           queryClient.invalidateQueries({ queryKey });
+        }}
+        onNew={() => {
+          // Reset has already been called in Header, just update UI as needed
+          toast({
+            title: "Ready to design",
+            description: "Start by dragging elements from the sidebar"
+          });
         }}
       />
       
