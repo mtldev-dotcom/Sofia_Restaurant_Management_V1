@@ -107,10 +107,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
     
-    const userId = supabaseData.user.id;
+    const supabaseUserId = supabaseData.user.id;
+    const email = supabaseData.user.email;
     
-    // Get the restaurants for this user
-    const restaurants = await storage.getCurrentUserRestaurants(userId);
+    console.log(`[restaurants] Fetching restaurants for Supabase user ID: ${supabaseUserId}, email: ${email}`);
+    
+    // First try with Supabase user ID
+    let restaurants = await storage.getCurrentUserRestaurants(supabaseUserId);
+    
+    // If no restaurants found and we have an email, try to find the user by email
+    if (restaurants.length === 0 && email) {
+      console.log(`[restaurants] No restaurants found by Supabase ID, trying to find user by email`);
+      const dbUser = await storage.getUserByEmail(email);
+      
+      if (dbUser) {
+        console.log(`[restaurants] Found user in database with ID: ${dbUser.id}, trying to get restaurants with this ID`);
+        restaurants = await storage.getCurrentUserRestaurants(dbUser.id);
+      }
+    }
+    
     res.json(restaurants);
   }));
 
