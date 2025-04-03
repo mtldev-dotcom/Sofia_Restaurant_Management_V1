@@ -48,6 +48,7 @@ const getToken = (req: Request): string | null => {
   }
   
   // Try to get from cookies
+  console.log('Auth cookies:', req.cookies);
   return req.cookies?.supabase_auth_token || null;
 };
 
@@ -280,94 +281,161 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email and password are required" });
       }
       
+      console.log(`[auth] Migration requested for email: ${email}`);
+      
       // Get the user from our database
       const dbUser = await storage.getUserByEmail(email);
       
       if (!dbUser) {
+        console.log(`[auth] Migration failed: User with email ${email} not found in database`);
         return res.status(404).json({ error: "User not found" });
       }
+      
+      console.log(`[auth] Found user in database with ID: ${dbUser.id}`);
       
       // Validate credentials with our database password
       const isCredentialValid = await storage.validateUserCredentials(dbUser.username, password);
       
       if (!isCredentialValid) {
+        console.log(`[auth] Migration failed: Invalid credentials for user ${dbUser.username}`);
         return res.status(401).json({ error: "Invalid credentials" });
       }
+      
+      console.log(`[auth] Credentials validated successfully`);
+      
+      // Get user's restaurant associations before migration
+      const restaurantAssociations = await storage.getCurrentUserRestaurants(dbUser.id);
+      console.log(`[auth] User has ${restaurantAssociations.length} restaurant associations`);
       
       // Check if user already has a Supabase Auth account by email
       const { data: { users: existingUsers }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
       
       if (getUserError) {
+        console.error(`[auth] Error fetching Supabase users:`, getUserError);
         return res.status(500).json({ error: "Error checking Supabase Auth: " + getUserError.message });
       }
       
       const existingUser = existingUsers.find(u => u.email === email);
+      let newUserId: string;
       
       if (existingUser) {
-        // User already exists in Supabase Auth, just update the ID in our database
-        await storage.updateUser(dbUser.id, { id: existingUser.id });
+        console.log(`[auth] User already exists in Supabase with ID: ${existingUser.id}`);
+        newUserId = existingUser.id;
         
-        // Sign in to get a session
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // If the password in Supabase doesn't match, update it
+        try {
+          // Try to sign in with the password to see if it matches
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError && signInError.message.includes("Invalid login credentials")) {
+            console.log(`[auth] Updating password in Supabase for user ${existingUser.id}`);
+            // Update password in Supabase
+            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+              existingUser.id,
+              { password }
+            );
+            
+            if (updateError) {
+              console.error(`[auth] Error updating password:`, updateError);
+              return res.status(500).json({ error: "Failed to update password in Supabase: " + updateError.message });
+            }
+          }
+        } catch (passwordError) {
+          console.error(`[auth] Error checking password:`, passwordError);
+        }
+      } else {
+        console.log(`[auth] Creating new user in Supabase Auth`);
+        // Create user in Supabase Auth
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email,
-          password
+          password,
+          email_confirm: true,
+          user_metadata: {
+            username: dbUser.username,
+            first_name: dbUser.firstName,
+            last_name: dbUser.lastName
+          }
         });
         
-        if (error) {
-          return res.status(401).json({ error: "Authentication failed: " + error.message });
+        if (createError) {
+          console.error(`[auth] Error creating user in Supabase:`, createError);
+          return res.status(500).json({ error: "Error creating Supabase Auth user: " + createError.message });
         }
         
-        // Set the session cookie
-        if (data.session) {
-          res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
+        if (!newUser || !newUser.user) {
+          console.error(`[auth] User created but data is missing`);
+          return res.status(500).json({ error: "Error creating Supabase Auth user: No user data returned" });
         }
         
-        return res.json({ 
-          message: "User migrated successfully", 
-          user: { ...dbUser, id: existingUser.id, password: undefined } 
-        });
+        console.log(`[auth] User created in Supabase with ID: ${newUser.user.id}`);
+        newUserId = newUser.user.id;
       }
       
-      // Create user in Supabase Auth
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          username: dbUser.username,
-          first_name: dbUser.firstName,
-          last_name: dbUser.lastName
+      // Handle restaurant associations
+      if (restaurantAssociations.length > 0) {
+        console.log(`[auth] Migrating ${restaurantAssociations.length} restaurant associations`);
+        
+        for (const { restaurant, role } of restaurantAssociations) {
+          try {
+            // Check if association already exists
+            const existingAssociations = await storage.getRestaurantUsers(restaurant.id);
+            const alreadyAssociated = existingAssociations.some(
+              assoc => assoc.userId === newUserId && assoc.restaurantId === restaurant.id
+            );
+            
+            if (!alreadyAssociated) {
+              console.log(`[auth] Creating association between user ${newUserId} and restaurant ${restaurant.id} with role ${role}`);
+              await storage.linkUserToRestaurant(newUserId, restaurant.id, role);
+            } else {
+              console.log(`[auth] Association already exists between user ${newUserId} and restaurant ${restaurant.id}`);
+            }
+          } catch (associationError) {
+            console.error(`[auth] Error creating restaurant association:`, associationError);
+            // Continue with other associations even if one fails
+          }
         }
-      });
-      
-      if (createError) {
-        return res.status(500).json({ error: "Error creating Supabase Auth user: " + createError.message });
       }
       
-      // Update our database with the Supabase user ID
-      await storage.updateUser(dbUser.id, { id: newUser.user.id });
+      // Update database user ID to match Supabase ID if they're different
+      if (dbUser.id !== newUserId) {
+        console.log(`[auth] Updating user ID in database from ${dbUser.id} to ${newUserId}`);
+        try {
+          await storage.updateUser(dbUser.id, { id: newUserId });
+        } catch (updateError) {
+          console.error(`[auth] Error updating user ID:`, updateError);
+          // Not a critical error, we can continue with sign-in
+        }
+      }
       
       // Sign in to get a session
+      console.log(`[auth] Signing in user to create session`);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       
       if (error) {
+        console.error(`[auth] Error signing in after migration:`, error);
         return res.status(401).json({ error: "Authentication failed after migration: " + error.message });
       }
       
       // Set the session cookie
       if (data.session) {
+        console.log(`[auth] Setting session cookie`);
         res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
       }
       
+      console.log(`[auth] Migration completed successfully`);
       return res.json({ 
         message: "User migrated successfully", 
-        user: { ...dbUser, id: newUser.user.id, password: undefined } 
+        user: { ...dbUser, id: newUserId, password: undefined } 
       });
       
     } catch (error) {
+      console.error(`[auth] Migration error:`, error);
       res.status(500).json({ error: "Migration failed: " + (error as Error).message });
     }
   });
@@ -378,27 +446,97 @@ export function setupAuth(app: Express) {
       const token = getToken(req);
       
       if (!token) {
+        console.log('[auth] No token found in request');
         return res.status(401).json({ error: "Not authenticated" });
       }
       
-      // Get the user from Supabase
-      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser(token);
+      console.log('[auth] Token found, verifying with Supabase');
       
-      if (error || !supabaseUser) {
+      // Get the user from Supabase
+      const { data, error } = await supabase.auth.getUser(token);
+      
+      if (error) {
+        console.log('[auth] Supabase getUser error:', error);
         return res.status(401).json({ error: "Invalid or expired token" });
       }
       
-      // Get the user from our database
-      const user = await storage.getUserById(supabaseUser.id);
+      if (!data.user) {
+        console.log('[auth] No user returned from Supabase');
+        return res.status(401).json({ error: "No user found for token" });
+      }
+      
+      console.log('[auth] Supabase user found:', data.user.id);
+      
+      // Get the user from our database by Supabase ID
+      let user = await storage.getUserById(data.user.id);
+      
+      // If user not found by ID, try to find by email
+      if (!user && data.user.email) {
+        console.log('[auth] User not found by ID, trying email lookup:', data.user.email);
+        user = await storage.getUserByEmail(data.user.email);
+        
+        if (user) {
+          console.log('[auth] User found by email, need to update ID');
+          // We found a user with the same email, but different ID
+          // This means we need to update the user's ID in our database
+          try {
+            // Try to find if there are any restaurant associations
+            const restaurants = await storage.getCurrentUserRestaurants(user.id);
+            
+            if (restaurants && restaurants.length > 0) {
+              console.log('[auth] User has restaurant associations, using migration dialog instead');
+              // If there are restaurant associations, we can't just update the ID
+              // Return a special response to trigger the migration dialog
+              return res.status(409).json({ 
+                error: "User needs migration",
+                code: "NEEDS_MIGRATION",
+                email: data.user.email
+              });
+            } else {
+              console.log('[auth] User has no restaurant associations, updating ID directly');
+              // If there are no restaurant associations, we can update the ID directly
+              user = await storage.updateUser(user.id, { id: data.user.id });
+            }
+          } catch (updateError) {
+            console.error('[auth] Error updating user ID:', updateError);
+            return res.status(500).json({ error: "Failed to update user ID" });
+          }
+        }
+      }
       
       if (!user) {
-        return res.status(404).json({ error: "User not found in database" });
+        console.log('[auth] User not found in database');
+        // If we still can't find the user, check if we need to create one from Supabase data
+        if (data.user.email && data.user.user_metadata) {
+          console.log('[auth] Creating new user from Supabase data');
+          try {
+            // Create a new user in our database
+            user = await storage.createUser({
+              id: data.user.id,
+              email: data.user.email,
+              username: data.user.user_metadata.username || data.user.email.split('@')[0],
+              firstName: data.user.user_metadata.first_name || '',
+              lastName: data.user.user_metadata.last_name || '',
+              password: "SUPABASE_AUTH", // We don't need a real password
+              role: "user"
+            });
+            console.log('[auth] Created new user with ID:', user.id);
+          } catch (createError) {
+            console.error('[auth] Error creating user:', createError);
+            return res.status(500).json({ error: "Failed to create user" });
+          }
+        } else {
+          return res.status(404).json({ error: "User not found in database" });
+        }
       }
+      
+      console.log('[auth] User found in database, returning user data');
       
       // Remove password from the response
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
+      console.error('[auth] Server error:', error);
       res.status(500).json({ error: "Server error" });
     }
   });

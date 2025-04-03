@@ -9,6 +9,7 @@ import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
+import { UserMigrationDialog } from "@/components/UserMigrationDialog";
 
 type AuthContextType = {
   user: User | null;
@@ -48,6 +49,8 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [supabaseLoaded, setSupabaseLoaded] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [migrationEmail, setMigrationEmail] = useState('');
 
   // Check for existing Supabase session on load
   useEffect(() => {
@@ -74,9 +77,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    refetch,
   } = useQuery<User | null, Error>({
     queryKey: ["/api/auth/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: getQueryFn({
+      on401: "returnNull",
+      onResponse: async (res) => {
+        // Handle migration needed error (409 Conflict)
+        if (res.status === 409) {
+          const data = await res.json();
+          if (data.code === "NEEDS_MIGRATION" && data.email) {
+            // Show migration dialog
+            setMigrationEmail(data.email);
+            setShowMigrationDialog(true);
+            return null;
+          }
+        }
+        return res;
+      }
+    }),
     enabled: supabaseLoaded, // Only run this query after we check for Supabase session
   });
 
@@ -165,6 +184,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const handleMigrationClose = () => {
+    setShowMigrationDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+  };
+  
   return (
     <AuthContext.Provider
       value={{
@@ -177,6 +201,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {showMigrationDialog && (
+        <UserMigrationDialog 
+          isOpen={showMigrationDialog} 
+          onClose={handleMigrationClose}
+          initialEmail={migrationEmail}
+        />
+      )}
     </AuthContext.Provider>
   );
 }
