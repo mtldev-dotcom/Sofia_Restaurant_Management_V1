@@ -82,7 +82,9 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
       // Get current floor plan layout data
       const layout = floorPlanState.getFloorPlanData();
       
-      if (floorPlanState.id) {
+      let floorPlanId = floorPlanState.id;
+      
+      if (floorPlanId) {
         // Update existing floor plan
         const updateData = {
           name: layoutName,
@@ -90,7 +92,7 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
           layout: layout
         };
         
-        await apiRequest('PUT', `/api/floorplans/${floorPlanState.id}`, updateData);
+        await apiRequest('PUT', `/api/floorplans/${floorPlanId}`, updateData);
         toast({
           title: "Success",
           description: "Floor plan updated successfully",
@@ -112,13 +114,18 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
         if (newFloorPlan && newFloorPlan.id) {
           floorPlanState.setName(layoutName);
           floorPlanState.id = newFloorPlan.id;
-          // The full floor plan object will be loaded later when needed
+          floorPlanId = newFloorPlan.id;
         }
         
         toast({
           title: "Success",
           description: "Floor plan saved successfully",
         });
+      }
+      
+      // Save tables as seating areas
+      if (floorPlanId) {
+        await saveTablesAsSeatingAreas(floorPlanId, layout.elements);
       }
       
       onClose();
@@ -131,6 +138,107 @@ const SaveLayoutModal = ({ isOpen, onClose, restaurantId, userId }: SaveLayoutMo
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  // Helper function to save tables as seating areas
+  const saveTablesAsSeatingAreas = async (floorPlanId: string, elements: any[]) => {
+    try {
+      // First, fetch existing seating areas for this floor plan
+      const response = await fetch(`/api/floorplans/${floorPlanId}/seatingareas`);
+      const existingSeatingAreas = await response.json();
+      
+      // Create a map of existing seating areas by element ID for quick lookup
+      const existingSeatingAreasMap = new Map();
+      existingSeatingAreas.forEach((area: any) => {
+        if (area.properties?.elementId) {
+          existingSeatingAreasMap.set(area.properties.elementId, area);
+        }
+      });
+      
+      // Filter elements that are tables (category === 'table')
+      const tableElements = elements.filter(element => element.category === 'table');
+      
+      // Process each table element
+      for (const tableElement of tableElements) {
+        // Determine capacity based on table type/size
+        let capacity = {
+          min: 1,
+          max: 4,
+          default: 2
+        };
+        
+        // Adjust capacity based on table size
+        if (tableElement.type === 'round' && tableElement.size === 'large') {
+          capacity = { min: 4, max: 8, default: 6 };
+        } else if (tableElement.type === 'square' && tableElement.size === 'large') {
+          capacity = { min: 4, max: 6, default: 4 };
+        } else if (tableElement.type === 'rectangle') {
+          capacity = { min: 2, max: 6, default: 4 };
+          if (tableElement.size === 'large') {
+            capacity = { min: 4, max: 8, default: 6 };
+          }
+        }
+        
+        // Create properties object
+        const properties = {
+          type: 'table',
+          shape: tableElement.isRound ? 'round' : tableElement.type,
+          color: tableElement.color || '#8B4513', // Default to brown if no color specified
+          isReservable: true,
+          status: 'available',
+          elementId: tableElement.id // Store reference to the floor plan element
+        };
+        
+        // Check if this table already exists as a seating area
+        const existingArea = existingSeatingAreasMap.get(tableElement.id);
+        
+        if (existingArea) {
+          // Update the existing seating area
+          const updateData = {
+            name: `Table ${tableElement.name || tableElement.id.substring(0, 5)}`,
+            capacityRange: capacity,
+            description: `${tableElement.type} table - ${tableElement.size || 'standard'} size`,
+            x: tableElement.x,
+            y: tableElement.y,
+            properties: properties
+          };
+          
+          await apiRequest('PUT', `/api/seatingareas/${existingArea.id}`, updateData);
+        } else {
+          // Create a new seating area
+          const seatingAreaData = {
+            floorPlanId: floorPlanId,
+            name: `Table ${tableElement.name || tableElement.id.substring(0, 5)}`,
+            capacityRange: capacity,
+            description: `${tableElement.type} table - ${tableElement.size || 'standard'} size`,
+            x: tableElement.x,
+            y: tableElement.y,
+            properties: properties
+          };
+          
+          await apiRequest('POST', '/api/seatingareas', seatingAreaData);
+        }
+      }
+      
+      // Handle removal of tables that no longer exist
+      const currentTableIds = new Set(tableElements.map(table => table.id));
+      
+      for (const [elementId, area] of existingSeatingAreasMap.entries()) {
+        if (!currentTableIds.has(elementId)) {
+          // This seating area's corresponding table no longer exists, delete it
+          await apiRequest('DELETE', `/api/seatingareas/${area.id}`, null);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error saving tables as seating areas:', error);
+      // Don't throw, as we don't want to prevent the floor plan from being saved
+      toast({
+        title: "Warning",
+        description: "Floor plan saved, but there was an issue saving tables as seating areas",
+        variant: "destructive"
+      });
     }
   };
   
