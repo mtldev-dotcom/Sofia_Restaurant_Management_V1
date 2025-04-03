@@ -12,7 +12,8 @@ import { AuthProvider } from "@/hooks/use-auth";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Home} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/floor-plan" component={Home} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback">

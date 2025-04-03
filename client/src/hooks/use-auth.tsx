@@ -108,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged in successfully",
         description: `Welcome back, ${user.firstName || user.username}!`,
       });
+      // Navigate to dashboard
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({
@@ -131,6 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome to Sofia Restaurant Management, ${user.firstName || user.username}!`,
       });
+      // Navigate to dashboard
+      window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
       toast({

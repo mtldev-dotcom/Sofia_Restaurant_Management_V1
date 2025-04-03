@@ -49,7 +49,7 @@ export function UserMigrationDialog({ isOpen, onClose }: UserMigrationDialogProp
       
       // Reload the page to apply the new session
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       }, 1500);
     } catch (error) {
       toast({

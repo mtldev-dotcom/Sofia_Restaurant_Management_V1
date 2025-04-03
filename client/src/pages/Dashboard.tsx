@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "wouter";
 import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -101,9 +102,9 @@ const Dashboard = () => {
                     : 'No floor plans created yet'}
                 </p>
                 <div className="mt-4">
-                  <a href="/floor-plan" className="text-primary text-sm hover:underline">
+                  <Link href="/floor-plan" className="text-primary text-sm hover:underline">
                     Manage floor plans →
-                  </a>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
@@ -121,9 +122,9 @@ const Dashboard = () => {
                 <div className="text-3xl font-bold">0</div>
                 <p className="text-muted-foreground">No bookings for today</p>
                 <div className="mt-4">
-                  <a href="/bookings" className="text-primary text-sm hover:underline">
+                  <Link href="/bookings" className="text-primary text-sm hover:underline">
                     Manage bookings →
-                  </a>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
