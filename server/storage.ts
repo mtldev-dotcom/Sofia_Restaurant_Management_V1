@@ -1,3 +1,5 @@
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 import { 
   type User, 
   type FloorPlan, 
@@ -820,18 +822,34 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Helper methods for password hashing (would use bcrypt in a real app)
+  // Helper methods for password hashing
   private async hashPassword(password: string): Promise<string> {
-    // In a real app, use a proper hashing library like bcrypt
-    // This is a placeholder implementation - do not use in production
-    const hashedPassword = password + '_hashed';
-    return hashedPassword;
+    const salt = randomBytes(16).toString("hex");
+    const scryptAsync = promisify(scrypt);
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
   }
   
   private async verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    // In a real app, use a proper hashing library like bcrypt
-    // This is a placeholder implementation - do not use in production
-    return hashedPassword === plainPassword + '_hashed';
+    try {
+      // Split the stored hash and salt
+      const [hashed, salt] = hashedPassword.split(".");
+      if (!hashed || !salt) {
+        console.error('Invalid hashed password format');
+        return false;
+      }
+      
+      // Hash the supplied password with the same salt
+      const scryptAsync = promisify(scrypt);
+      const hashedBuf = Buffer.from(hashed, "hex");
+      const suppliedBuf = (await scryptAsync(plainPassword, salt, 64)) as Buffer;
+      
+      // Compare the hashes using a time-constant comparison function
+      return timingSafeEqual(hashedBuf, suppliedBuf);
+    } catch (error) {
+      console.error('Error verifying password:', error);
+      return false;
+    }
   }
 }
 
