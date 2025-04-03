@@ -258,14 +258,24 @@ export class DatabaseStorage implements IStorage {
     try {
       // If this is set as default, unset any existing default
       if (floorPlan.isDefault && floorPlan.restaurantId) {
-        await db
-          .update(floorPlans)
-          .set({ isDefault: false })
+        const plansToUpdate = await db
+          .select()
+          .from(floorPlans)
           .where(and(
             eq(floorPlans.restaurantId, floorPlan.restaurantId),
-            eq(floorPlans.isDefault, true),
-            eq(floorPlans.id, id).not()
+            eq(floorPlans.isDefault, true)
           ));
+        
+        // Filter out the current floor plan
+        const otherDefaultPlans = plansToUpdate.filter(plan => plan.id !== id);
+        
+        // Update each plan individually
+        for (const plan of otherDefaultPlans) {
+          await db
+            .update(floorPlans)
+            .set({ isDefault: false })
+            .where(eq(floorPlans.id, plan.id));
+        }
       }
       
       // Update values
