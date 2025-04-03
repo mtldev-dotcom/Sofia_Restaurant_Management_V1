@@ -451,7 +451,19 @@ export function setupAuth(app: Express) {
         newUserId = newUser.user.id;
       }
       
-      // Handle restaurant associations
+      // First update database user ID to match Supabase ID if they're different
+      // This needs to happen BEFORE we try to create restaurant associations
+      if (dbUser.id !== newUserId) {
+        console.log(`[auth] Updating user ID in database from ${dbUser.id} to ${newUserId}`);
+        try {
+          await storage.updateUser(dbUser.id, { id: newUserId });
+        } catch (updateError) {
+          console.error(`[auth] Error updating user ID:`, updateError);
+          return res.status(500).json({ error: "Failed to update user ID. Please try again." });
+        }
+      }
+      
+      // Now handle restaurant associations AFTER the user ID has been updated
       if (restaurantAssociations.length > 0) {
         console.log(`[auth] Migrating ${restaurantAssociations.length} restaurant associations`);
         
@@ -473,17 +485,6 @@ export function setupAuth(app: Express) {
             console.error(`[auth] Error creating restaurant association:`, associationError);
             // Continue with other associations even if one fails
           }
-        }
-      }
-      
-      // Update database user ID to match Supabase ID if they're different
-      if (dbUser.id !== newUserId) {
-        console.log(`[auth] Updating user ID in database from ${dbUser.id} to ${newUserId}`);
-        try {
-          await storage.updateUser(dbUser.id, { id: newUserId });
-        } catch (updateError) {
-          console.error(`[auth] Error updating user ID:`, updateError);
-          // Not a critical error, we can continue with sign-in
         }
       }
       

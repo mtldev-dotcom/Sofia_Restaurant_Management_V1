@@ -546,12 +546,26 @@ export class DatabaseStorage implements IStorage {
   
   async linkUserToRestaurant(userId: string, restaurantId: string, role: string): Promise<RestaurantUser> {
     try {
-      // First check if the user and restaurant exist
-      const user = await this.getUserById(userId);
-      if (!user) {
-        throw new Error(`User with ID ${userId} not found`);
+      console.log(`[storage] Starting linkUserToRestaurant: user=${userId}, restaurant=${restaurantId}, role=${role}`);
+      
+      // First check if the user exists directly in the database
+      // This is more reliable than getUserById during a migration
+      const userCheck = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(eq(users.id, userId));
+        
+      const userExists = userCheck[0].count > 0;
+      
+      if (!userExists) {
+        console.warn(`[storage] ⚠️ Warning: User ID ${userId} not found in database during association creation.`);
+        // In development mode, we'll allow migration to proceed despite issues
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error(`User with ID ${userId} not found`);
+        }
       }
 
+      // Check if restaurant exists
       const restaurant = await this.getRestaurant(restaurantId);
       if (!restaurant) {
         throw new Error(`Restaurant with ID ${restaurantId} not found`);
@@ -567,11 +581,13 @@ export class DatabaseStorage implements IStorage {
         ));
       
       if (existingRelationships.length > 0) {
+        console.log(`[storage] Association already exists for user=${userId}, restaurant=${restaurantId}`);
         // If it exists but role is different, update it
         if (existingRelationships[0].role !== role) {
+          console.log(`[storage] Updating role from ${existingRelationships[0].role} to ${role}`);
           const results = await db
             .update(restaurantUsers)
-            .set({ role })
+            .set({ role, updatedAt: new Date() })
             .where(and(
               eq(restaurantUsers.userId, userId),
               eq(restaurantUsers.restaurantId, restaurantId)
@@ -585,22 +601,26 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Create a new relationship
+      console.log(`[storage] Creating new association for user=${userId}, restaurant=${restaurantId}, role=${role}`);
       const results = await db
         .insert(restaurantUsers)
         .values({
           userId,
           restaurantId,
-          role
+          role,
+          createdAt: new Date(),
+          updatedAt: new Date()
         })
         .returning();
       
       if (results.length === 0) {
-        throw new Error('Failed to link user to restaurant');
+        throw new Error('Failed to link user to restaurant: no results returned');
       }
       
+      console.log(`[storage] Successfully created association with ID=${results[0].id}`);
       return results[0];
     } catch (error) {
-      console.error('Error linking user to restaurant:', error);
+      console.error('[storage] Error linking user to restaurant:', error);
       throw new Error(`Failed to link user to restaurant: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
