@@ -256,6 +256,13 @@ export type UpdateSeatingArea = z.infer<typeof updateSeatingAreaSchema>;
 export type CapacityRange = z.infer<typeof capacityRangeSchema>;
 export type SeatingAreaProperties = z.infer<typeof seatingAreaPropertiesSchema>;
 
+// Define sessions table for PostgreSQL session store
+export const sessions = pgTable("sessions", {
+  sid: text("sid").primaryKey(),
+  sess: jsonb("sess").notNull(),
+  expire: timestamp("expire", { withTimezone: true }).notNull()
+});
+
 // Floor plan layout types
 export type FloorPlanElement = z.infer<typeof elementSchema>;
 export type BackgroundSettings = z.infer<typeof backgroundSettingsSchema>;
