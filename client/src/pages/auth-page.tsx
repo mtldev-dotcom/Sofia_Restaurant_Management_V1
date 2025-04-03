@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
+import { UserMigrationDialog } from "@/components/UserMigrationDialog";
 
 // Login form schema
 const loginSchema = z.object({
@@ -62,6 +63,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [migrationDialogOpen, setMigrationDialogOpen] = useState(false);
   const { user, loginMutation, registerMutation } = useAuth();
   
   // Login form - MUST be created before any conditional returns
@@ -178,9 +180,12 @@ export default function AuthPage() {
                     </form>
                   </Form>
                 </CardContent>
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex flex-col justify-center space-y-2">
                   <Button variant="link" onClick={() => setActiveTab("register")}>
                     Don't have an account? Register
+                  </Button>
+                  <Button variant="link" className="text-sm text-muted-foreground" onClick={() => setMigrationDialogOpen(true)}>
+                    Migrate existing account to Supabase
                   </Button>
                 </CardFooter>
               </Card>
@@ -396,6 +401,12 @@ export default function AuthPage() {
         </div>
       </div>
 
+      {/* User Migration Dialog */}
+      <UserMigrationDialog 
+        isOpen={migrationDialogOpen} 
+        onClose={() => setMigrationDialogOpen(false)} 
+      />
+      
       {/* Right side - Hero Section */}
       <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary/90 to-primary-foreground text-primary-foreground">
         <div className="flex flex-col justify-center px-12 py-12">

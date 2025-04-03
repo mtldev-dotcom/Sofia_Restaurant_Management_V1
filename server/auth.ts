@@ -7,6 +7,19 @@ import { User as SchemaUser } from "@shared/schema";
 import { supabase } from "./supabase";
 import { createServerClient } from '@supabase/ssr';
 import { CookieOptions } from "express";
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase admin client for user management
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 declare global {
   namespace Express {
@@ -232,6 +245,107 @@ export function setupAuth(app: Express) {
       res.sendStatus(200);
     } catch (error) {
       next(error);
+    }
+  });
+
+  // This endpoint is for migrating a user to Supabase Auth during the transition period
+  app.post("/api/auth/migrate-user", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+      
+      // Get the user from our database
+      const dbUser = await storage.getUserByEmail(email);
+      
+      if (!dbUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Validate credentials with our database password
+      const isCredentialValid = await storage.validateUserCredentials(dbUser.username, password);
+      
+      if (!isCredentialValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      // Check if user already has a Supabase Auth account by email
+      const { data: { users: existingUsers }, error: getUserError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (getUserError) {
+        return res.status(500).json({ error: "Error checking Supabase Auth: " + getUserError.message });
+      }
+      
+      const existingUser = existingUsers.find(u => u.email === email);
+      
+      if (existingUser) {
+        // User already exists in Supabase Auth, just update the ID in our database
+        await storage.updateUser(dbUser.id, { id: existingUser.id });
+        
+        // Sign in to get a session
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) {
+          return res.status(401).json({ error: "Authentication failed: " + error.message });
+        }
+        
+        // Set the session cookie
+        if (data.session) {
+          res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
+        }
+        
+        return res.json({ 
+          message: "User migrated successfully", 
+          user: { ...dbUser, id: existingUser.id, password: undefined } 
+        });
+      }
+      
+      // Create user in Supabase Auth
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          username: dbUser.username,
+          first_name: dbUser.firstName,
+          last_name: dbUser.lastName
+        }
+      });
+      
+      if (createError) {
+        return res.status(500).json({ error: "Error creating Supabase Auth user: " + createError.message });
+      }
+      
+      // Update our database with the Supabase user ID
+      await storage.updateUser(dbUser.id, { id: newUser.user.id });
+      
+      // Sign in to get a session
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        return res.status(401).json({ error: "Authentication failed after migration: " + error.message });
+      }
+      
+      // Set the session cookie
+      if (data.session) {
+        res.cookie('supabase_auth_token', data.session.access_token, cookieOptions);
+      }
+      
+      return res.json({ 
+        message: "User migrated successfully", 
+        user: { ...dbUser, id: newUser.user.id, password: undefined } 
+      });
+      
+    } catch (error) {
+      res.status(500).json({ error: "Migration failed: " + (error as Error).message });
     }
   });
 
