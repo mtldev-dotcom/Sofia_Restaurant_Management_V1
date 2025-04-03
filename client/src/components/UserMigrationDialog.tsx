@@ -185,9 +185,9 @@ This appears to be a server or system error. Please try again later or contact s
     }}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Migrate Your Account</DialogTitle>
+          <DialogTitle>Account Migration Troubleshooting</DialogTitle>
           <DialogDescription>
-            We've upgraded our authentication system for improved security. Please enter your email and password to migrate your account. Your restaurant data and settings will be preserved.
+            Account migration should happen automatically in most cases. Use this tool only if you're having trouble accessing your account after our authentication system upgrade. Enter your old email and password to manually migrate your account.
           </DialogDescription>
         </DialogHeader>
         

@@ -83,13 +83,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({
       on401: "returnNull",
       onResponse: async (res) => {
-        // Handle migration needed error (409 Conflict)
+        // We're now handling migrations automatically on the server side
+        // This code block is kept for compatibility with older versions but is unlikely to be triggered
         if (res.status === 409) {
           const data = await res.json();
           if (data.code === "NEEDS_MIGRATION" && data.email) {
-            // Show migration dialog
-            setMigrationEmail(data.email);
-            setShowMigrationDialog(true);
+            console.log("Migration needed for user", data.email);
+            // Refetech after 1 second to allow the server to complete the migration
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+            }, 1000);
             return null;
           }
         }

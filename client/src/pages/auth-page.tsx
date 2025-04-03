@@ -184,8 +184,9 @@ export default function AuthPage() {
                   <Button variant="link" onClick={() => setActiveTab("register")}>
                     Don't have an account? Register
                   </Button>
-                  <Button variant="link" className="text-sm text-muted-foreground" onClick={() => setMigrationDialogOpen(true)}>
-                    Migrate existing account to Supabase
+                  {/* Migration is now handled automatically, but keeping this as a fallback option */}
+                  <Button variant="ghost" className="text-xs text-muted-foreground" onClick={() => setMigrationDialogOpen(true)}>
+                    Account migration troubleshooting
                   </Button>
                 </CardFooter>
               </Card>

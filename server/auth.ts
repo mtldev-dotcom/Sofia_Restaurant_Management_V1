@@ -622,7 +622,8 @@ export function setupAuth(app: Express) {
                 
                 // If we get a foreign key constraint error, there might be an issue with the database state
                 // Let's provide more helpful information
-                if (directInsertError.toString().includes('foreign key constraint')) {
+                // Type cast the error to any to access its string representation safely
+                if (String(directInsertError).includes('foreign key constraint')) {
                   console.log(`[auth] Foreign key constraint error detected - checking database state`);
                   
                   // Check if the user exists in the database
@@ -744,23 +745,91 @@ export function setupAuth(app: Express) {
           console.log('[auth] User found by email, need to update ID');
           // We found a user with the same email, but different ID
           // This means we need to update the user's ID in our database
+          
+          // Check if user has restaurant associations
+          const oldUserId = user.id;
+          const newUserId = data.user.id;
+          const restaurants = await storage.getCurrentUserRestaurants(oldUserId);
+          
+          if (restaurants.length > 0) {
+            console.log(`[auth] Found ${restaurants.length} restaurant associations to update`);
+          }
+          
           try {
-            // Try to find if there are any restaurant associations
-            const restaurants = await storage.getCurrentUserRestaurants(user.id);
+            console.log('[auth] User with matching email found - direct ID update');
             
-            if (restaurants && restaurants.length > 0) {
-              console.log('[auth] User has restaurant associations, using migration dialog instead');
-              // If there are restaurant associations, we can't just update the ID
-              // Return a special response to trigger the migration dialog
-              return res.status(409).json({ 
-                error: "User needs migration",
-                code: "NEEDS_MIGRATION",
-                email: data.user.email
-              });
-            } else {
-              console.log('[auth] User has no restaurant associations, updating ID directly');
-              // If there are no restaurant associations, we can update the ID directly
-              user = await storage.updateUser(user.id, { id: data.user.id });
+            // Force direct ID update regardless of restaurant associations
+            try {
+              // Use direct SQL for more control
+              console.log('[auth] Using direct SQL to update user ID');
+              
+              // Update restaurant_users first
+              if (restaurants.length > 0) {
+                try {
+                  // First try to update the restaurant associations
+                  const updateResult = await pool.query(
+                    `UPDATE restaurant_users SET user_id = $1 WHERE user_id = $2`,
+                    [newUserId, oldUserId]
+                  );
+                  console.log(`[auth] Updated ${updateResult.rowCount} restaurant associations`);
+                } catch (restaurantUpdateError) {
+                  console.error('[auth] Error updating restaurant associations:', restaurantUpdateError);
+                  
+                  // If we can't update restaurant associations, we'll create a database record for the new ID
+                  // Check if user already exists with new ID
+                  const existingUserWithNewId = await storage.getUserById(newUserId);
+                  if (!existingUserWithNewId) {
+                    console.log('[auth] Creating new user record with Supabase ID');
+                    // Create a new user with the Supabase ID
+                    await storage.createUser({
+                      id: newUserId,
+                      email: user.email,
+                      username: user.username,
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      password: "SUPABASE_AUTH", // We don't need a real password
+                      role: user.role === "admin" ? "admin" : "user" // Only valid role values
+                    });
+                    
+                    // Now update the restaurant associations
+                    for (const { restaurant, role } of restaurants) {
+                      try {
+                        await storage.linkUserToRestaurant(newUserId, restaurant.id, role);
+                        console.log(`[auth] Linked user ${newUserId} to restaurant ${restaurant.id} with role ${role}`);
+                      } catch (linkError) {
+                        console.error(`[auth] Error linking user to restaurant: ${linkError}`);
+                      }
+                    }
+                    
+                    // Get the updated user
+                    user = await storage.getUserById(newUserId);
+                    return user;
+                  }
+                }
+              }
+              
+              // Update the user record
+              const updateUserResult = await pool.query(
+                `UPDATE users SET id = $1 WHERE id = $2`,
+                [newUserId, oldUserId]
+              );
+              console.log(`[auth] Updated user ID: ${updateUserResult.rowCount} rows affected`);
+              
+              // Get the updated user
+              user = await storage.getUserById(newUserId);
+              if (!user) {
+                console.error('[auth] Failed to retrieve updated user');
+                
+                // Critical failure, get the old user as fallback
+                user = await storage.getUserById(oldUserId);
+                if (user) {
+                  console.log('[auth] Retrieved original user as fallback');
+                }
+              }
+            } catch (directUpdateError) {
+              console.error('[auth] Direct SQL update failed:', directUpdateError);
+              // If direct SQL update fails, continue with the existing user
+              console.log('[auth] Continuing with existing user record');
             }
           } catch (updateError) {
             console.error('[auth] Error updating user ID:', updateError);
