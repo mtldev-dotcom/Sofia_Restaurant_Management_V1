@@ -47,11 +47,17 @@ function Router() {
   
   return (
     <Switch>
-      <Route path="/floor-plan">
-        <Home />
-      </Route>
       <Route path="/floor-plan/:id">
-        {(params) => <Home restaurantId={params.id} />}
+        {(params) => {
+          console.log("Floor plan route with params:", params);
+          return <Home restaurantId={params.id} />;
+        }}
+      </Route>
+      <Route path="/floor-plan">
+        {() => {
+          console.log("Floor plan route without params");
+          return <Home />;
+        }}
       </Route>
       <ProtectedRoute path="/dashboard" component={() => (
         <AppLayout>
@@ -67,7 +73,9 @@ function Router() {
       <Route path="/auth/callback">
         {() => <div>Processing authentication...</div>}
       </Route>
-      <Route component={NotFound} />
+      <Route>
+        {() => <NotFound />}
+      </Route>
     </Switch>
   );
 }
