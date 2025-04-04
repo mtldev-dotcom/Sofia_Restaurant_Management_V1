@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import HomeMinimal from "@/pages/HomeMinimal";
 import Dashboard from "@/pages/Dashboard";
 import AuthPage from "@/pages/auth-page";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -47,6 +48,12 @@ function Router() {
   
   return (
     <Switch>
+      <Route path="/minimal">
+        {() => {
+          console.log("Minimal floor plan route");
+          return <HomeMinimal />;
+        }}
+      </Route>
       <Route path="/floor-plan/:id">
         {(params) => {
           console.log("Floor plan route with params:", params);
