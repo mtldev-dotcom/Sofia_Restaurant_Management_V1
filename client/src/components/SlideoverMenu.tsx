@@ -17,7 +17,7 @@ interface SlideoverMenuProps {
 }
 
 const SlideoverMenu: React.FC<SlideoverMenuProps> = ({ isOpen, onClose }) => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const isMobile = useIsMobile();
   
   const navigation: NavigationItem[] = [

@@ -14,13 +14,17 @@ import { useLocation } from "wouter";
 import Header from "@/components/Header";
 
 const Home = () => {
+  console.log("Rendering Floor Plan Home component");
+  
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);
   const { toast } = useToast();
   const { user, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  
+  console.log("Current location:", location);
   
   // Handle save button click
   const handleSave = () => {

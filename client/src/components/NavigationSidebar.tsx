@@ -9,7 +9,8 @@ import {
   Users,
   Settings,
   Menu,
-  X
+  X,
+  Home
 } from 'lucide-react';
 import {
   Sheet,
@@ -21,10 +22,11 @@ type NavigationItem = {
   name: string;
   href: string;
   icon: React.ReactNode;
+  implemented: boolean;
 };
 
 const NavigationSidebar = () => {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -33,38 +35,46 @@ const NavigationSidebar = () => {
     {
       name: "Dashboard",
       href: "/dashboard",
-      icon: <LayoutDashboard className="h-5 w-5" />
+      icon: <LayoutDashboard className="h-5 w-5" />,
+      implemented: true
     },
     {
       name: "Floor Plans",
       href: "/floor-plan",
-      icon: <LayoutDashboard className="h-5 w-5" />
+      icon: <Home className="h-5 w-5" />,
+      implemented: true
     },
     {
       name: "Bookings",
       href: "/bookings",
-      icon: <CalendarDays className="h-5 w-5" />
+      icon: <CalendarDays className="h-5 w-5" />,
+      implemented: false
     },
     {
       name: "Customers",
       href: "/customers",
-      icon: <Users className="h-5 w-5" />
+      icon: <Users className="h-5 w-5" />,
+      implemented: false
     },
     {
       name: "Settings",
       href: "/settings",
-      icon: <Settings className="h-5 w-5" />
+      icon: <Settings className="h-5 w-5" />,
+      implemented: false
     }
   ];
 
-  const handleClick = (href: string, isImplemented: boolean = true) => {
-    if (!isImplemented && href !== "/floor-plan") {
+  const handleNavClick = (e: React.MouseEvent, item: NavigationItem) => {
+    e.preventDefault();
+    
+    if (item.implemented) {
+      navigate(item.href);
+      setOpen(false);
+    } else {
       toast({
         title: "Coming Soon",
         description: "This feature is currently in development",
       });
-    } else {
-      setOpen(false);
     }
   };
 
@@ -75,24 +85,17 @@ const NavigationSidebar = () => {
         <ul className="flex space-x-4">
           {navigationItems.map((item) => {
             const isActive = location === item.href;
-            const isImplemented = item.href === "/floor-plan" || item.href === "/dashboard";
             
             return (
               <li key={item.name}>
                 <a
-                  href={isImplemented ? item.href : "#"}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (isImplemented) {
-                      window.location.href = item.href;
-                    }
-                    handleClick(item.href, isImplemented);
-                  }}
+                  href={item.href}
+                  onClick={(e) => handleNavClick(e, item)}
                   className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${
                     isActive
                       ? "bg-primary/10 text-primary"
                       : "text-foreground hover:bg-muted/50"
-                  } ${!isImplemented && "opacity-60 cursor-default"}`}
+                  } ${!item.implemented && "opacity-60 cursor-default"}`}
                 >
                   <span className="mr-2">{item.icon}</span>
                   {item.name}
@@ -131,27 +134,23 @@ const NavigationSidebar = () => {
             <nav className="space-y-1 px-2">
               {navigationItems.map((item) => {
                 const isActive = location === item.href;
-                const isImplemented = item.href === "/floor-plan" || item.href === "/dashboard";
 
                 return (
                   <a
                     key={item.name}
-                    href={isImplemented ? item.href : "#"}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (isImplemented) {
-                        window.location.href = item.href;
-                      }
-                      handleClick(item.href, isImplemented);
-                    }}
+                    href={item.href}
+                    onClick={(e) => handleNavClick(e, item)}
                     className={`flex items-center px-3 py-2 text-base font-medium rounded-md ${
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-foreground hover:bg-muted/50"
-                    } ${!isImplemented && "opacity-60 cursor-default"}`}
+                    } ${!item.implemented && "opacity-60 cursor-default"}`}
                   >
                     <span className="mr-3">{item.icon}</span>
                     {item.name}
+                    {!item.implemented && (
+                      <span className="ml-auto text-xs bg-muted px-1.5 py-0.5 rounded">Soon</span>
+                    )}
                   </a>
                 );
               })}
