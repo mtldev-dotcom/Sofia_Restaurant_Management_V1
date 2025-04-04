@@ -4,7 +4,6 @@ import EditorPanel from "@/components/EditorPanel";
 import PropertiesPanel from "@/components/PropertiesPanel";
 import SaveLayoutModal from "@/components/SaveLayoutModal";
 import LoadLayoutModal from "@/components/LoadLayoutModal";
-import AppLayout from "@/components/AppLayout";
 import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -113,54 +112,50 @@ const Home = () => {
   
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="h-screen flex flex-col items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Loading floor plan designer...</p>
-        </div>
-      </AppLayout>
+      <div className="h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading floor plan designer...</p>
+      </div>
     );
   }
   
   return (
-    <AppLayout>
-      <div className="h-screen flex flex-col overflow-hidden">
-        <Header
-          title="Floor Plan Designer"
-          onSave={handleSave}
-          onLoad={handleLoad}
-          onNew={() => useFloorPlanStore.getState().resetFloorPlan()}
-        />
-        <div className="flex-1 flex overflow-hidden">
-          <Sidebar />
-          <EditorPanel />
-          
-          {selectedElement && (
-            <PropertiesPanel 
-              selectedElement={selectedElement}
-              onClose={() => useFloorPlanStore.getState().selectElement(null)}
-            />
-          )}
-        </div>
-
-        {user && (
-          <>
-            <SaveLayoutModal 
-              isOpen={isSaveModalOpen}
-              onClose={() => setIsSaveModalOpen(false)}
-              restaurantId={restaurantId || undefined}
-              userId={user.id}
-            />
-            
-            <LoadLayoutModal 
-              isOpen={isLoadModalOpen}
-              onClose={() => setIsLoadModalOpen(false)}
-              restaurantId={restaurantId || undefined}
-            />
-          </>
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
+      <Header
+        title="Floor Plan Designer"
+        onSave={handleSave}
+        onLoad={handleLoad}
+        onNew={() => useFloorPlanStore.getState().resetFloorPlan()}
+      />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <EditorPanel />
+        
+        {selectedElement && (
+          <PropertiesPanel 
+            selectedElement={selectedElement}
+            onClose={() => useFloorPlanStore.getState().selectElement(null)}
+          />
         )}
       </div>
-    </AppLayout>
+
+      {user && (
+        <>
+          <SaveLayoutModal 
+            isOpen={isSaveModalOpen}
+            onClose={() => setIsSaveModalOpen(false)}
+            restaurantId={restaurantId || undefined}
+            userId={user.id}
+          />
+          
+          <LoadLayoutModal 
+            isOpen={isLoadModalOpen}
+            onClose={() => setIsLoadModalOpen(false)}
+            restaurantId={restaurantId || undefined}
+          />
+        </>
+      )}
+    </div>
   );
 };
 
