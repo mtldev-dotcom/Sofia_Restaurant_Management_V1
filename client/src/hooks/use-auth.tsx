@@ -52,7 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [migrationEmail, setMigrationEmail] = useState('');
 
-  // Check for existing Supabase session on load
+  /**
+   * Check for existing Supabase session on component mount
+   * This ensures we fetch user data if they already have a valid session
+   */
   useEffect(() => {
     async function getInitialSession() {
       try {
@@ -63,9 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.session) {
           queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         }
-        setSupabaseLoaded(true);
       } catch (error) {
         console.error("Error checking session:", error);
+      } finally {
+        // Always set loaded state to true, even if there was an error
         setSupabaseLoaded(true);
       }
     }
@@ -102,7 +106,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     enabled: supabaseLoaded, // Only run this query after we check for Supabase session
   });
 
-  // Set up Supabase auth state listener
+  /**
+   * Set up Supabase auth state listener
+   * This keeps the client state in sync with Supabase authentication state
+   * and updates the user data accordingly
+   */
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
@@ -114,26 +122,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    // Clean up the subscription when the component unmounts
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
+  /**
+   * Login mutation for handling user authentication
+   * Sends login credentials to the server and handles success/error states
+   */
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/auth/login", credentials);
       return await res.json();
     },
     onSuccess: (user: User) => {
+      // Update the user data in the query cache
       queryClient.setQueryData(["/api/auth/user"], user);
+      
+      // Show success notification
       toast({
         title: "Logged in successfully",
         description: `Welcome back, ${user.firstName || user.username}!`,
       });
+      
       // Navigate to dashboard
       window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
+      // Show error notification
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
@@ -142,23 +160,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  /**
+   * Registration mutation for creating new user accounts
+   * Handles form submission and server response
+   */
   const registerMutation = useMutation({
     mutationFn: async (userData: RegisterData) => {
-      // Remove confirmPassword from the payload
+      // Remove confirmPassword from the payload before sending to server
       const { confirmPassword, ...userDataToSend } = userData;
       const res = await apiRequest("POST", "/api/auth/register", userDataToSend);
       return await res.json();
     },
     onSuccess: (user: User) => {
+      // Update the user data in the query cache
       queryClient.setQueryData(["/api/auth/user"], user);
+      
+      // Show success notification
       toast({
         title: "Registration successful",
         description: `Welcome to Sofia Restaurant Management, ${user.firstName || user.username}!`,
       });
+      
       // Navigate to dashboard
       window.location.href = "/dashboard";
     },
     onError: (error: Error) => {
+      // Show error notification
       toast({
         title: "Registration failed",
         description: error.message,
@@ -167,18 +194,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  /**
+   * Logout mutation for signing out users
+   * Clears user session and updates application state
+   */
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      // Clear user data from the query cache
       queryClient.setQueryData(["/api/auth/user"], null);
+      
+      // Show success notification
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
       });
+      
+      // Redirect to home page
+      window.location.href = "/";
     },
     onError: (error: Error) => {
+      // Show error notification
       toast({
         title: "Logout failed",
         description: error.message,

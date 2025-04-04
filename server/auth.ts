@@ -42,6 +42,11 @@ const cookieOptions: CookieOptions = {
 };
 
 // Function to extract auth token from request
+/**
+ * Extract auth token from request (header or cookies)
+ * @param req Express request object
+ * @returns Auth token or null if not found
+ */
 const getToken = (req: Request): string | null => {
   // Try to get from authorization header
   const authHeader = req.headers.authorization;
@@ -50,7 +55,6 @@ const getToken = (req: Request): string | null => {
   }
   
   // Try to get from cookies
-  console.log('Auth cookies:', req.cookies);
   return req.cookies?.supabase_auth_token || null;
 };
 
@@ -706,43 +710,38 @@ export function setupAuth(app: Express) {
     }
   });
 
+  /**
+   * Get current authenticated user
+   * Returns user data or appropriate error response
+   */
   app.get("/api/auth/user", async (req, res) => {
     try {
       // Get the token from the request
       const token = getToken(req);
       
       if (!token) {
-        console.log('[auth] No token found in request');
         return res.status(401).json({ error: "Not authenticated" });
       }
-      
-      console.log('[auth] Token found, verifying with Supabase');
       
       // Get the user from Supabase
       const { data, error } = await supabase.auth.getUser(token);
       
       if (error) {
-        console.log('[auth] Supabase getUser error:', error);
         return res.status(401).json({ error: "Invalid or expired token" });
       }
       
       if (!data.user) {
-        console.log('[auth] No user returned from Supabase');
         return res.status(401).json({ error: "No user found for token" });
       }
-      
-      console.log('[auth] Supabase user found:', data.user.id);
       
       // Get the user from our database by Supabase ID
       let user = await storage.getUserById(data.user.id);
       
       // If user not found by ID, try to find by email
       if (!user && data.user.email) {
-        console.log('[auth] User not found by ID, trying email lookup:', data.user.email);
         user = await storage.getUserByEmail(data.user.email);
         
         if (user) {
-          console.log('[auth] User found by email, need to update ID');
           // We found a user with the same email, but different ID
           // This means we need to update the user's ID in our database
           
@@ -751,35 +750,22 @@ export function setupAuth(app: Express) {
           const newUserId = data.user.id;
           const restaurants = await storage.getCurrentUserRestaurants(oldUserId);
           
-          if (restaurants.length > 0) {
-            console.log(`[auth] Found ${restaurants.length} restaurant associations to update`);
-          }
-          
           try {
-            console.log('[auth] User with matching email found - direct ID update');
-            
             // Force direct ID update regardless of restaurant associations
             try {
-              // Use direct SQL for more control
-              console.log('[auth] Using direct SQL to update user ID');
-              
               // Update restaurant_users first
               if (restaurants.length > 0) {
                 try {
                   // First try to update the restaurant associations
-                  const updateResult = await pool.query(
+                  await pool.query(
                     `UPDATE restaurant_users SET user_id = $1 WHERE user_id = $2`,
                     [newUserId, oldUserId]
                   );
-                  console.log(`[auth] Updated ${updateResult.rowCount} restaurant associations`);
                 } catch (restaurantUpdateError) {
-                  console.error('[auth] Error updating restaurant associations:', restaurantUpdateError);
-                  
                   // If we can't update restaurant associations, we'll create a database record for the new ID
                   // Check if user already exists with new ID
                   const existingUserWithNewId = await storage.getUserById(newUserId);
                   if (!existingUserWithNewId) {
-                    console.log('[auth] Creating new user record with Supabase ID');
                     // Create a new user with the Supabase ID
                     await storage.createUser({
                       id: newUserId,
@@ -795,9 +781,8 @@ export function setupAuth(app: Express) {
                     for (const { restaurant, role } of restaurants) {
                       try {
                         await storage.linkUserToRestaurant(newUserId, restaurant.id, role);
-                        console.log(`[auth] Linked user ${newUserId} to restaurant ${restaurant.id} with role ${role}`);
                       } catch (linkError) {
-                        console.error(`[auth] Error linking user to restaurant: ${linkError}`);
+                        console.error('[auth] Error linking user to restaurant:', linkError);
                       }
                     }
                     
@@ -809,27 +794,19 @@ export function setupAuth(app: Express) {
               }
               
               // Update the user record
-              const updateUserResult = await pool.query(
+              await pool.query(
                 `UPDATE users SET id = $1 WHERE id = $2`,
                 [newUserId, oldUserId]
               );
-              console.log(`[auth] Updated user ID: ${updateUserResult.rowCount} rows affected`);
               
               // Get the updated user
               user = await storage.getUserById(newUserId);
               if (!user) {
-                console.error('[auth] Failed to retrieve updated user');
-                
                 // Critical failure, get the old user as fallback
                 user = await storage.getUserById(oldUserId);
-                if (user) {
-                  console.log('[auth] Retrieved original user as fallback');
-                }
               }
             } catch (directUpdateError) {
               console.error('[auth] Direct SQL update failed:', directUpdateError);
-              // If direct SQL update fails, continue with the existing user
-              console.log('[auth] Continuing with existing user record');
             }
           } catch (updateError) {
             console.error('[auth] Error updating user ID:', updateError);
@@ -839,10 +816,8 @@ export function setupAuth(app: Express) {
       }
       
       if (!user) {
-        console.log('[auth] User not found in database');
         // If we still can't find the user, check if we need to create one from Supabase data
         if (data.user.email && data.user.user_metadata) {
-          console.log('[auth] Creating new user from Supabase data');
           try {
             // Create a new user in our database
             user = await storage.createUser({
@@ -854,7 +829,6 @@ export function setupAuth(app: Express) {
               password: "SUPABASE_AUTH", // We don't need a real password
               role: "user"
             });
-            console.log('[auth] Created new user with ID:', user.id);
           } catch (createError) {
             console.error('[auth] Error creating user:', createError);
             return res.status(500).json({ error: "Failed to create user" });
@@ -864,10 +838,20 @@ export function setupAuth(app: Express) {
         }
       }
       
-      console.log('[auth] User found in database, returning user data');
+      // Check for migration status: if user has an ID that is different from Supabase
+      if (user.id !== data.user.id) {
+        // Return user data with migration status
+        const { password: _, ...userWithoutPassword } = user;
+        return res.status(409).json({
+          error: "User needs migration",
+          code: "NEEDS_MIGRATION",
+          email: user.email,
+          user: userWithoutPassword
+        });
+      }
       
       // Remove password from the response
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('[auth] Server error:', error);
