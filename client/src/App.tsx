@@ -14,6 +14,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/floor-plan" component={Home} />
+      <ProtectedRoute path="/floor-plan/:id?" component={Home} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/callback">

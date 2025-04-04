@@ -16,6 +16,7 @@ A powerful web application for restaurant owners and managers to design, customi
 - **Responsive Design**: Works on desktop and tablet devices
 - **User Authentication**: Secure authentication using Supabase Auth
 - **Multi-tenant**: Support for multiple restaurants per user
+6. **Improved Navigation Experience**: Seamless client-side routing for authentication flows without page reloads
 
 ## Tech Stack
 
@@ -291,6 +292,7 @@ We have recently migrated the authentication system from a custom implementation
 3. **Seamless User Migration**: Existing users can easily migrate their accounts to Supabase
 4. **Automatic Restaurant Creation**: New users automatically create a restaurant during registration
 5. **Persistent Sessions**: Better session management across page refreshes and browser tabs
+6. **Smooth Navigation Experience**: Client-side routing for authentication flows without jarring page reloads
 
 ### Implementation Details
 

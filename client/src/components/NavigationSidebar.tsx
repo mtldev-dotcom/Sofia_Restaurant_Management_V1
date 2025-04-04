@@ -68,7 +68,12 @@ const NavigationSidebar = () => {
     e.preventDefault();
     
     if (item.implemented) {
-      navigate(item.href);
+      // For floor plan navigation, always use the base path
+      if (item.href === '/floor-plan' && location.startsWith('/floor-plan/')) {
+        navigate('/floor-plan');
+      } else {
+        navigate(item.href);
+      }
       setOpen(false);
     } else {
       toast({
@@ -84,7 +89,10 @@ const NavigationSidebar = () => {
       <nav className="mr-6">
         <ul className="flex space-x-4">
           {navigationItems.map((item) => {
-            const isActive = location === item.href;
+            // Check if location starts with the href to handle nested routes like /floor-plan/:id
+            const isActive = item.href === '/floor-plan' 
+              ? location === '/floor-plan' || location.startsWith('/floor-plan/') 
+              : location === item.href;
             
             return (
               <li key={item.name}>
@@ -133,7 +141,10 @@ const NavigationSidebar = () => {
           <div className="flex-1 overflow-auto py-2">
             <nav className="space-y-1 px-2">
               {navigationItems.map((item) => {
-                const isActive = location === item.href;
+                // Check if location starts with the href to handle nested routes like /floor-plan/:id
+                const isActive = item.href === '/floor-plan' 
+                  ? location === '/floor-plan' || location.startsWith('/floor-plan/') 
+                  : location === item.href;
 
                 return (
                   <a

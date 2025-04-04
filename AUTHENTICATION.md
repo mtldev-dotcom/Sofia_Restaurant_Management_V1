@@ -36,14 +36,14 @@ The application uses Supabase Auth with Server-Side Rendering (SSR) patterns to 
    - Server creates matching user record in application database
    - If requested, server creates a new restaurant and links it to the user
    - Session token is returned and stored in HTTP-only cookie
-   - User is redirected to dashboard
+   - User is navigated to dashboard using client-side routing (no page reload)
 
 2. **Login Flow**
    - User submits email and password
    - Credentials are validated against Supabase Auth
    - If valid, session token is stored in HTTP-only cookie
    - User record is fetched from application database
-   - User is redirected to dashboard
+   - User is navigated to dashboard using client-side routing (no page reload)
 
 3. **Session Validation**
    - On each request to protected endpoints, token is extracted from cookies
@@ -56,7 +56,7 @@ The application uses Supabase Auth with Server-Side Rendering (SSR) patterns to 
    - User initiates logout
    - Supabase Auth session is terminated
    - Session cookie is cleared
-   - User is redirected to home page
+   - User is navigated to home page using client-side routing (no page reload)
 
 ## Token Management
 
@@ -194,6 +194,38 @@ export function useAuth() {
   return context;
 }
 ```
+
+
+## Client-Side Navigation
+
+The authentication system uses client-side navigation for a smoother user experience:
+
+1. **SPA Navigation**
+   - All authentication-related navigations (login, logout, registration) use client-side routing
+   - No full page reloads when transitioning between authenticated/unauthenticated states
+   - Utilizes wouter's navigation API for seamless transitions
+
+2. **Benefits**
+   - Faster perceived performance with instant state changes
+   - Preserves application state during navigation
+   - Reduces server load by eliminating unnecessary page reloads
+   - Provides a more app-like user experience
+
+3. **Implementation**
+   ```typescript
+   // Using wouter navigation instead of window.location redirects
+   const { navigate } = useNavigate();
+   
+   // In login/registration success handlers
+   onSuccess: (user: User) => {
+     // Update client state
+     queryClient.setQueryData(["/api/auth/user"], user);
+     
+     // Navigate programmatically without page reload
+     navigate("/dashboard");
+   }
+   ```
+
 
 ## Future Improvements
 

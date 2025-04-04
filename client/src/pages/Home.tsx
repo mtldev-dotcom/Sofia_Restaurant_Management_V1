@@ -10,21 +10,20 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, useRoute, useParams } from "wouter";
 import Header from "@/components/Header";
+import { Loader2 } from "lucide-react";
 
 const Home = () => {
-  console.log("Rendering Floor Plan Home component");
-  
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);
   const { toast } = useToast();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [location, setLocation] = useLocation();
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
-  
-  console.log("Current location:", location);
+  const [, params] = useRoute('/floor-plan/:id?');
+  const floorPlanId = params?.id;
   
   // Handle save button click
   const handleSave = () => {
@@ -50,6 +49,40 @@ const Home = () => {
     enabled: !!user,
   });
   
+  // Fetch specific floor plan if ID is provided
+  const { data: floorPlanData, isLoading: isLoadingFloorPlan } = useQuery({
+    queryKey: ['/api/floorplans', floorPlanId],
+    queryFn: async () => {
+      if (!floorPlanId) return null;
+      const response = await fetch(`/api/floorplans/${floorPlanId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch floor plan');
+      }
+      return response.json();
+    },
+    enabled: !!floorPlanId && !!user,
+  });
+  
+  // Load specific floor plan when data is available
+  useEffect(() => {
+    if (floorPlanData) {
+      try {
+        useFloorPlanStore.getState().loadFloorPlan(floorPlanData);
+        toast({
+          title: "Floor plan loaded",
+          description: `Loaded floor plan: ${floorPlanData.name}`,
+        });
+      } catch (error) {
+        console.error("Error loading floor plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load floor plan",
+          variant: "destructive"
+        });
+      }
+    }
+  }, [floorPlanData, toast]);
+  
   // Set the restaurant ID from the user's restaurants
   useEffect(() => {
     if (userRestaurants && userRestaurants.length > 0) {
@@ -65,16 +98,29 @@ const Home = () => {
     }
   }, [userRestaurants, user]);
   
-  // Redirect to dashboard if no user is found after loading
+  // Redirect to auth if no user is found after loading
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoadingAuth && !user) {
       setLocation('/auth');
       toast({
         title: "Authentication required",
         description: "Please sign in to access the floor plan designer",
       });
     }
-  }, [isLoading, user, setLocation, toast]);
+  }, [isLoadingAuth, user, setLocation, toast]);
+  
+  const isLoading = isLoadingAuth || isLoadingRestaurants || isLoadingFloorPlan;
+  
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="h-screen flex flex-col items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading floor plan designer...</p>
+        </div>
+      </AppLayout>
+    );
+  }
   
   return (
     <AppLayout>
