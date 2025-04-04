@@ -29,7 +29,7 @@ const SlideoverMenu: React.FC<SlideoverMenuProps> = ({ isOpen, onClose }) => {
     },
     {
       name: 'Floor Plan',
-      href: '/',
+      href: '/floor-plan',
       icon: <Home className="h-5 w-5" />,
       implemented: true,
     },

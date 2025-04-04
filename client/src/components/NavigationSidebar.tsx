@@ -37,7 +37,7 @@ const NavigationSidebar = () => {
     },
     {
       name: "Floor Plans",
-      href: "/",
+      href: "/floor-plan",
       icon: <LayoutDashboard className="h-5 w-5" />
     },
     {
@@ -58,7 +58,7 @@ const NavigationSidebar = () => {
   ];
 
   const handleClick = (href: string, isImplemented: boolean = true) => {
-    if (!isImplemented && href !== "/") {
+    if (!isImplemented && href !== "/floor-plan") {
       toast({
         title: "Coming Soon",
         description: "This feature is currently in development",
@@ -75,7 +75,7 @@ const NavigationSidebar = () => {
         <ul className="flex space-x-4">
           {navigationItems.map((item) => {
             const isActive = location === item.href;
-            const isImplemented = item.href === "/" || item.href === "/dashboard";
+            const isImplemented = item.href === "/floor-plan" || item.href === "/dashboard";
             
             return (
               <li key={item.name}>
@@ -131,7 +131,7 @@ const NavigationSidebar = () => {
             <nav className="space-y-1 px-2">
               {navigationItems.map((item) => {
                 const isActive = location === item.href;
-                const isImplemented = item.href === "/" || item.href === "/dashboard";
+                const isImplemented = item.href === "/floor-plan" || item.href === "/dashboard";
 
                 return (
                   <a

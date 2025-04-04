@@ -1,0 +1,44 @@
+ rest-express@1.0.0 dev
+12:05:37 AM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+Auth cookies: [Object: null prototype] {}
+[auth] No token found in request
+12:05:39 AM [express] GET /api/auth/user 401 in 3ms :: {"error":"Not authenticated"}
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI5NWQ5ZWNhZi00MWY4LTQxMjUtYTc2YS0yMGJlNzYzOWJlYmIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI4NDgzLCJpYXQiOjE3NDM3MjQ4ODMsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkIiLCJ1c2VybmFtZSI6Im10bGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyNDg4M31dLCJzZXNzaW9uX2lkIjoiNTZjOWZjZDUtYzViMC00OGQ5LTkyZWQtMTI0NzBkMzRjMjZmIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.yek-o4nXlSduCZPD8w9wV2Ptc9VFNkhoivas4z7uz-s'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 95d9ecaf-41f8-4125-a76a-20be7639bebb
+[auth] User found in database, returning user data
+12:05:41 AM [express] GET /api/auth/user 304 in 226ms :: {"id":"95d9ecaf-41f8-4125-a76a-20be7639bebb"…
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI5NWQ5ZWNhZi00MWY4LTQxMjUtYTc2YS0yMGJlNzYzOWJlYmIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI4NDgzLCJpYXQiOjE3NDM3MjQ4ODMsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkIiLCJ1c2VybmFtZSI6Im10bGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyNDg4M31dLCJzZXNzaW9uX2lkIjoiNTZjOWZjZDUtYzViMC00OGQ5LTkyZWQtMTI0NzBkMzRjMjZmIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.yek-o4nXlSduCZPD8w9wV2Ptc9VFNkhoivas4z7uz-s'
+}
+[auth] Token found, verifying with Supabase
+[restaurants] Fetching restaurants for Supabase user ID: 95d9ecaf-41f8-4125-a76a-20be7639bebb, email: me@nickybruno.com
+12:05:41 AM [express] GET /api/user/restaurants 304 in 373ms :: [{"restaurant":{"id":"896c3745-b74e-4…
+12:05:41 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850 304 in 52ms :: {"id":…
+12:05:41 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850/floorplans 304 in 53m…
+[auth] Supabase user found: 95d9ecaf-41f8-4125-a76a-20be7639bebb
+[auth] User found in database, returning user data
+12:05:41 AM [express] GET /api/auth/user 304 in 356ms :: {"id":"95d9ecaf-41f8-4125-a76a-20be7639bebb"…
+[restaurants] Fetching restaurants for Supabase user ID: 95d9ecaf-41f8-4125-a76a-20be7639bebb, email: me@nickybruno.com
+12:05:42 AM [express] GET /api/user/restaurants 304 in 186ms :: [{"restaurant":{"id":"896c3745-b74e-4…
+12:05:42 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850 304 in 56ms :: {"id":…
+12:05:42 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850/floorplans 304 in 56m…
+Auth cookies: {
+  'connect.sid': 's:BiEhKSJ5_msHNOruWttvB_V_VbHYDEr9.n63t/QE0Z3Zp7CEaSKbKE3JGe9rD3b8LwLH62Of6od4',
+  supabase_auth_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6IkJZT09JS0RoN0YyUHh5SjciLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2p6aWR6cnJzd3NoYnppeWpxa2lsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI5NWQ5ZWNhZi00MWY4LTQxMjUtYTc2YS0yMGJlNzYzOWJlYmIiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzQzNzI4NDgzLCJpYXQiOjE3NDM3MjQ4ODMsImVtYWlsIjoibWVAbmlja3licnVuby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJmaXJzdF9uYW1lIjoiTmljayIsImxhc3RfbmFtZSI6IkIiLCJ1c2VybmFtZSI6Im10bGxkZXYifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc0MzcyNDg4M31dLCJzZXNzaW9uX2lkIjoiNTZjOWZjZDUtYzViMC00OGQ5LTkyZWQtMTI0NzBkMzRjMjZmIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.yek-o4nXlSduCZPD8w9wV2Ptc9VFNkhoivas4z7uz-s'
+}
+[auth] Token found, verifying with Supabase
+[auth] Supabase user found: 95d9ecaf-41f8-4125-a76a-20be7639bebb
+[auth] User found in database, returning user data
+12:06:39 AM [express] GET /api/auth/user 304 in 420ms :: {"id":"95d9ecaf-41f8-4125-a76a-20be7639bebb"…
+[restaurants] Fetching restaurants for Supabase user ID: 95d9ecaf-41f8-4125-a76a-20be7639bebb, email: me@nickybruno.com
+12:06:40 AM [express] GET /api/user/restaurants 304 in 372ms :: [{"restaurant":{"id":"896c3745-b74e-4…
+12:06:40 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850 304 in 56ms :: {"id":…
+12:06:40 AM [express] GET /api/restaurants/896c3745-b74e-4d12-a689-e5dff87d0850/floorplans 304 in 56m…
