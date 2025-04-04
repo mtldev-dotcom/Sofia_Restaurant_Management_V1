@@ -244,6 +244,7 @@ const Sidebar = () => {
       </AlertDialog>
       
       <Tabs 
+        defaultValue="elements"
         value={selectedTab} 
         onValueChange={setSelectedTab}
         className="h-full flex flex-col"

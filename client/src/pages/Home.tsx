@@ -121,6 +121,10 @@ const Home = () => {
     );
   }
   
+  // Add debugging info
+  console.log("Home rendering, restaurantId:", restaurantId);
+  console.log("User restaurants:", userRestaurants);
+  
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
       <Header
@@ -129,9 +133,14 @@ const Home = () => {
         onLoad={handleLoad}
         onNew={() => useFloorPlanStore.getState().resetFloorPlan()}
       />
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
-        <EditorPanel />
+      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
+        {/* Force inline styles to ensure components are visible */}
+        <div style={{ width: '280px', height: '100%', overflow: 'auto', borderRight: '1px solid var(--border)' }}>
+          <Sidebar />
+        </div>
+        <div style={{ flex: 1, height: '100%', overflow: 'auto' }}>
+          <EditorPanel />
+        </div>
         
         {selectedElement && (
           <PropertiesPanel 
