@@ -9,42 +9,78 @@ import { useFloorPlanStore } from "@/store/floorPlanStore";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import Header from "@/components/Header";
 
 const Home = () => {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);
   const { toast } = useToast();
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
   
-  // Hard-coded for demo purposes - in a real app, these would come from auth and user selection
-  const DEMO_USER_ID = 'd4f5bd34-ae5d-4caf-b835-b7ae2fa5f59d';
-  const DEMO_RESTAURANT_ID = 'caf5abc2-4eb0-4641-a212-6f967b99db87';
+  // Handle save button click
+  const handleSave = () => {
+    setIsSaveModalOpen(true);
+  };
   
-  // Fetch the user's restaurant data when the component mounts
-  const { data: restaurantData } = useQuery({
-    queryKey: ['/api/user', DEMO_USER_ID, 'restaurants'],
+  // Handle load button click
+  const handleLoad = () => {
+    setIsLoadModalOpen(true);
+  };
+  
+  // Get the user's restaurants
+  const { data: userRestaurants, isLoading: isLoadingRestaurants } = useQuery({
+    queryKey: ['/api/user/restaurants'],
     queryFn: async () => {
-      const response = await fetch(`/api/user/${DEMO_USER_ID}/restaurants`);
+      if (!user) return [];
+      const response = await fetch('/api/user/restaurants');
       if (!response.ok) {
         throw new Error('Failed to fetch user restaurants');
       }
       return response.json();
-    }
+    },
+    enabled: !!user,
   });
   
-  // Set the restaurant ID in the store when data is available
+  // Set the restaurant ID from the user's restaurants
   useEffect(() => {
-    if (DEMO_RESTAURANT_ID) {
-      useFloorPlanStore.getState().setRestaurantId(DEMO_RESTAURANT_ID);
+    if (userRestaurants && userRestaurants.length > 0) {
+      // Use the first restaurant by default
+      const firstRestaurant = userRestaurants[0].restaurant;
+      setRestaurantId(firstRestaurant.id);
+      
+      // Update the floor plan store
+      useFloorPlanStore.getState().setRestaurantId(firstRestaurant.id);
+      if (user) {
+        useFloorPlanStore.getState().setCreatedBy(user.id);
+      }
     }
-    if (DEMO_USER_ID) {
-      useFloorPlanStore.getState().setCreatedBy(DEMO_USER_ID);
+  }, [userRestaurants, user]);
+  
+  // Redirect to dashboard if no user is found after loading
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation('/auth');
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to access the floor plan designer",
+      });
     }
-  }, []);
+  }, [isLoading, user, setLocation, toast]);
   
   return (
     <AppLayout>
       <div className="h-screen flex flex-col overflow-hidden">
+        <Header
+          title="Floor Plan Designer"
+          onSave={handleSave}
+          onLoad={handleLoad}
+          onNew={() => useFloorPlanStore.getState().resetFloorPlan()}
+        />
         <div className="flex-1 flex overflow-hidden">
           <Sidebar />
           <EditorPanel />
@@ -57,18 +93,22 @@ const Home = () => {
           )}
         </div>
 
-        <SaveLayoutModal 
-          isOpen={isSaveModalOpen}
-          onClose={() => setIsSaveModalOpen(false)}
-          restaurantId={DEMO_RESTAURANT_ID}
-          userId={DEMO_USER_ID}
-        />
-        
-        <LoadLayoutModal 
-          isOpen={isLoadModalOpen}
-          onClose={() => setIsLoadModalOpen(false)}
-          restaurantId={DEMO_RESTAURANT_ID}
-        />
+        {user && (
+          <>
+            <SaveLayoutModal 
+              isOpen={isSaveModalOpen}
+              onClose={() => setIsSaveModalOpen(false)}
+              restaurantId={restaurantId || undefined}
+              userId={user.id}
+            />
+            
+            <LoadLayoutModal 
+              isOpen={isLoadModalOpen}
+              onClose={() => setIsLoadModalOpen(false)}
+              restaurantId={restaurantId || undefined}
+            />
+          </>
+        )}
       </div>
     </AppLayout>
   );
