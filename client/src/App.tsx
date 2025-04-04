@@ -42,22 +42,44 @@ function LayoutProtectedRoute({
 }
 
 function Router() {
-  return (
-    <Switch>
-      <LayoutProtectedRoute path="/" component={Dashboard} />
-      <LayoutProtectedRoute path="/floor-plan" component={Home} useAppLayout={false} />
-      <LayoutProtectedRoute path="/floor-plan/:id" component={Home} useAppLayout={false} />
-      <LayoutProtectedRoute path="/dashboard" component={Dashboard} />
-      <Route path="/auth" component={AuthPage} />
+  // Using Route outside Switch gives us more control 
+  // and ensures only one route renders at a time
+  
+  // Check for exact path matches first
+  const [location] = useLocation();
+  
+  // Dashboard route - exact path match
+  if (location === "/") {
+    return <LayoutProtectedRoute path="/" component={Dashboard} />;
+  }
+  
+  // Floor plan routes
+  if (location === "/floor-plan" || location.startsWith("/floor-plan/")) {
+    return location === "/floor-plan" ? 
+      <LayoutProtectedRoute path="/floor-plan" component={Home} useAppLayout={false} /> :
+      <LayoutProtectedRoute path="/floor-plan/:id" component={Home} useAppLayout={false} />;
+  }
+  
+  // Dashboard specific route
+  if (location === "/dashboard") {
+    return <LayoutProtectedRoute path="/dashboard" component={Dashboard} />;
+  }
+  
+  // Auth routes
+  if (location === "/auth") {
+    return <Route path="/auth" component={AuthPage} />;
+  }
+  
+  if (location === "/auth/callback") {
+    return (
       <Route path="/auth/callback">
-        {() => {
-          // This is just a placeholder component since the server handles the redirect
-          return <div>Processing authentication...</div>;
-        }}
+        {() => <div>Processing authentication...</div>}
       </Route>
-      <Route component={NotFound} />
-    </Switch>
-  );
+    );
+  }
+  
+  // Not found for any other routes
+  return <Route component={NotFound} />;
 }
 
 function App() {
