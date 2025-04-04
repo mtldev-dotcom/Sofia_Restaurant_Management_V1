@@ -11,7 +11,7 @@ const Panel = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "bg-white border border-gray-200",
+        "bg-background border border-border",
         variant === "floating" && "rounded-lg shadow-lg",
         className
       )}
@@ -29,7 +29,7 @@ const PanelHeader = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("px-4 py-3 border-b border-gray-200", className)}
+      className={cn("px-4 py-3 border-b border-border", className)}
       {...props}
     />
   );

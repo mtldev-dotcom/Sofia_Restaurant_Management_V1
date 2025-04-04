@@ -19,6 +19,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Separator } from "@/components/ui/separator";
 
 const EditorPanel = () => {
+  console.log("Rendering EditorPanel component");
+  
   const canvasRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(100);
   const [isDragging, setIsDragging] = useState(false);

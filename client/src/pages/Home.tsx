@@ -14,6 +14,8 @@ import Header from "@/components/Header";
 import { Loader2 } from "lucide-react";
 
 const Home = () => {
+  console.log("Rendering Home component");
+  
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isLoadModalOpen, setIsLoadModalOpen] = useState(false);
   const selectedElement = useFloorPlanStore((state) => state.selectedElement);

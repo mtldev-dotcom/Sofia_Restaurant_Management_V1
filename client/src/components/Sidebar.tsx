@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const Sidebar = () => {
+  console.log("Rendering Sidebar component");
+  
   const startDrag = useFloorPlanStore((state) => state.startDrag);
   const { loadFloorPlan } = useFloorPlanStore();
   const restaurantId = useFloorPlanStore((state) => state.restaurantId);
