@@ -42,44 +42,60 @@ function LayoutProtectedRoute({
 }
 
 function Router() {
-  // Using Route outside Switch gives us more control 
-  // and ensures only one route renders at a time
-  
-  // Check for exact path matches first
+  // Using customized routing logic to ensure only one route renders
   const [location] = useLocation();
   
-  // Dashboard route - exact path match
-  if (location === "/") {
-    return <LayoutProtectedRoute path="/" component={Dashboard} />;
-  }
+  // Debug the current route
+  console.log("Current route location:", location);
   
-  // Floor plan routes
-  if (location === "/floor-plan" || location.startsWith("/floor-plan/")) {
-    return location === "/floor-plan" ? 
-      <LayoutProtectedRoute path="/floor-plan" component={Home} useAppLayout={false} /> :
-      <LayoutProtectedRoute path="/floor-plan/:id" component={Home} useAppLayout={false} />;
-  }
+  // Map paths to components with exact matching for clarity
+  // This prevents any overlapping route matches
   
-  // Dashboard specific route
-  if (location === "/dashboard") {
-    return <LayoutProtectedRoute path="/dashboard" component={Dashboard} />;
-  }
+  // Exact matches in order of priority
+  const routes = [
+    { 
+      path: "/floor-plan", 
+      match: (loc: string) => loc === "/floor-plan",
+      component: () => <LayoutProtectedRoute path="/floor-plan" component={Home} useAppLayout={false} />
+    },
+    { 
+      path: "/floor-plan/:id", 
+      match: (loc: string) => loc.startsWith("/floor-plan/") && loc !== "/floor-plan",
+      component: () => <LayoutProtectedRoute path="/floor-plan/:id" component={Home} useAppLayout={false} />
+    },
+    { 
+      path: "/dashboard", 
+      match: (loc: string) => loc === "/dashboard",
+      component: () => <LayoutProtectedRoute path="/dashboard" component={Dashboard} />
+    },
+    { 
+      path: "/", 
+      match: (loc: string) => loc === "/",
+      component: () => <LayoutProtectedRoute path="/" component={Dashboard} />
+    },
+    { 
+      path: "/auth", 
+      match: (loc: string) => loc === "/auth",
+      component: () => <Route path="/auth" component={AuthPage} />
+    },
+    { 
+      path: "/auth/callback", 
+      match: (loc: string) => loc === "/auth/callback",
+      component: () => (
+        <Route path="/auth/callback">
+          {() => <div>Processing authentication...</div>}
+        </Route>
+      )
+    }
+  ];
   
-  // Auth routes
-  if (location === "/auth") {
-    return <Route path="/auth" component={AuthPage} />;
-  }
+  // Find the first matching route
+  const matchedRoute = routes.find(route => route.match(location));
   
-  if (location === "/auth/callback") {
-    return (
-      <Route path="/auth/callback">
-        {() => <div>Processing authentication...</div>}
-      </Route>
-    );
-  }
+  console.log("Matched route:", matchedRoute?.path || "Not found");
   
-  // Not found for any other routes
-  return <Route component={NotFound} />;
+  // Return the matched component or NotFound
+  return matchedRoute ? matchedRoute.component() : <Route component={NotFound} />;
 }
 
 function App() {
