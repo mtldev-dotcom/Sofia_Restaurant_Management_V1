@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 import { UserMigrationDialog } from "@/components/UserMigrationDialog";
+import { useNavigate } from "@/hooks/use-navigate";
 
 type AuthContextType = {
   user: User | null;
@@ -48,6 +49,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const { navigate } = useNavigate();
   const [supabaseLoaded, setSupabaseLoaded] = useState(false);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [migrationEmail, setMigrationEmail] = useState('');
@@ -147,8 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.firstName || user.username}!`,
       });
       
-      // Navigate to dashboard
-      window.location.href = "/dashboard";
+      // Navigate to dashboard using wouter (smoother transition)
+      navigate("/dashboard");
     },
     onError: (error: Error) => {
       // Show error notification
@@ -181,8 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome to Sofia Restaurant Management, ${user.firstName || user.username}!`,
       });
       
-      // Navigate to dashboard
-      window.location.href = "/dashboard";
+      // Navigate to dashboard using wouter (smoother transition)
+      navigate("/dashboard");
     },
     onError: (error: Error) => {
       // Show error notification
@@ -212,8 +214,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been logged out of your account.",
       });
       
-      // Redirect to home page
-      window.location.href = "/";
+      // Redirect to home page using wouter (smoother transition)
+      navigate("/");
     },
     onError: (error: Error) => {
       // Show error notification
